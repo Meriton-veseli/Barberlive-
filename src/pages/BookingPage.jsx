@@ -1,12 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-
-const services = [
-  { id: 1, name: 'Haircut', duration: '30 min', price: '$25' },
-  { id: 2, name: 'Haircut + Beard', duration: '45 min', price: '$35' },
-  { id: 3, name: 'Beard Trim', duration: '20 min', price: '$15' },
-  { id: 4, name: 'Kids Haircut', duration: '20 min', price: '$18' },
-]
+import { db } from '../firebase'
+import {
+  collection, query, where, getDocs,
+  addDoc, onSnapshot, doc, getDoc
+} from 'firebase/firestore'
 
 const timeSlots = [
   '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
@@ -15,22 +13,85 @@ const timeSlots = [
   '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
 ]
 
-const bookedSlots = ['10:00 AM', '11:30 AM', '2:00 PM']
-
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const dates = ['28', '29', '30', '31', '1', '2']
 
 function BookingPage() {
   const { username } = useParams()
+  const [barber, setBarber] = useState(null)
+  const [bookedSlots, setBookedSlots] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDay, setSelectedDay] = useState(0)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [step, setStep] = useState('book')
   const [form, setForm] = useState({ name: '', phone: '' })
+  const [loading, setLoading] = useState(false)
+  const [notFound, setNotFound] = useState(false)
 
-  function handleConfirm() {
+  useEffect(() => {
+    async function fetchBarber() {
+      const q = query(collection(db, 'barbers'), where('username', '==', username))
+      const snap = await getDocs(q)
+      if (snap.empty) { setNotFound(true); return }
+      setBarber(snap.docs[0].data())
+    }
+    fetchBarber()
+  }, [username])
+
+  useEffect(() => {
+    if (!barber) return
+    const q = query(
+      collection(db, 'appointments'),
+      where('username', '==', username),
+      where('day', '==', `${days[selectedDay]}, Apr ${dates[selectedDay]}`)
+    )
+    const unsub = onSnapshot(q, (snap) => {
+      setBookedSlots(snap.docs.map(d => d.data().time))
+    })
+    return () => unsub()
+  }, [barber, selectedDay, username])
+
+  async function handleConfirm() {
     if (!selectedService || !selectedSlot || !form.name || !form.phone) return
-    setStep('confirmed')
+    setLoading(true)
+    try {
+      const service = barber.services[selectedService]
+      await addDoc(collection(db, 'appointments'), {
+        username,
+        clientName: form.name,
+        clientPhone: form.phone,
+        service: service.name,
+        price: service.price,
+        time: selectedSlot,
+        day: `${days[selectedDay]}, Apr ${dates[selectedDay]}`,
+        status: 'upcoming',
+        createdAt: new Date(),
+      })
+      setStep('confirmed')
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl mb-2">✂️</p>
+          <p className="text-sm text-gray-400">This barber page doesn't exist.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!barber) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-gray-400">Loading...</p>
+      </div>
+    )
   }
 
   if (step === 'confirmed') {
@@ -49,7 +110,7 @@ function BookingPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Service</span>
-              <span className="text-gray-900 font-medium">{services.find(s => s.id === selectedService)?.name}</span>
+              <span className="text-gray-900 font-medium">{barber.services[selectedService]?.name}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Day</span>
@@ -92,20 +153,20 @@ function BookingPage() {
         <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
           <h2 className="text-sm font-medium text-gray-900 mb-4">Select a service</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {services.map((s) => (
+            {barber.services.map((s, i) => (
               <button
-                key={s.id}
-                onClick={() => setSelectedService(s.id)}
+                key={i}
+                onClick={() => setSelectedService(i)}
                 className={`text-left p-4 rounded-xl border transition-all ${
-                  selectedService === s.id
+                  selectedService === i
                     ? 'border-purple-600 bg-purple-50'
                     : 'border-gray-100 hover:border-gray-200'
                 }`}
               >
-                <p className={`text-sm font-medium mb-1 ${selectedService === s.id ? 'text-purple-700' : 'text-gray-900'}`}>
+                <p className={`text-sm font-medium mb-1 ${selectedService === i ? 'text-purple-700' : 'text-gray-900'}`}>
                   {s.name}
                 </p>
-                <p className="text-xs text-gray-400">{s.duration} · {s.price}</p>
+                <p className="text-xs text-gray-400">{s.duration} · ${s.price}</p>
               </button>
             ))}
           </div>
@@ -176,10 +237,10 @@ function BookingPage() {
 
         <button
           onClick={handleConfirm}
-          disabled={!selectedService || !selectedSlot || !form.name || !form.phone}
+          disabled={selectedService === null || !selectedSlot || !form.name || !form.phone || loading}
           className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl text-sm transition-all"
         >
-          Confirm booking
+          {loading ? 'Confirming...' : 'Confirm booking'}
         </button>
 
       </div>
