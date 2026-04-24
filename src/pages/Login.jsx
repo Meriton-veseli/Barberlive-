@@ -17,10 +17,11 @@ function Login() {
     try {
       if (isSignUp) {
         await createUserWithEmailAndPassword(auth, form.email, form.password)
+        navigate('/onboarding')
       } else {
         await signInWithEmailAndPassword(auth, form.email, form.password)
+        navigate('/dashboard')
       }
-      navigate('/dashboard')
     } catch (err) {
       setError(err.message.replace('Firebase: ', ''))
     } finally {
