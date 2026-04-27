@@ -7,20 +7,11 @@ import {
 } from 'firebase/firestore'
 
 const timeSlots = [
-  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
-  '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
+  '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
+  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
+  '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
+  '5:00 PM', '5:30 PM', '6:00 PM',
 ]
-const today = new Date()
-const week = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date(today)
-  d.setDate(today.getDate() + i)
-  return d
-})
-const days = week.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }))
-const dates = week.map(d => d.getDate().toString())
-const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
 
 function BookingPage() {
   const { username } = useParams()
@@ -33,6 +24,35 @@ function BookingPage() {
   const [form, setForm] = useState({ name: '', phone: '' })
   const [loading, setLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
+
+  const today = new Date()
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    return d
+  })
+  const days = week.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }))
+  const dates = week.map(d => d.getDate().toString())
+  const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
+  const fullDayNames = week.map(d => d.toLocaleDateString('en-US', { weekday: 'long' }))
+
+  const availability = barber?.availability || null
+
+  function isDayOff(i) {
+    if (!availability) return false
+    const dayConfig = availability[fullDayNames[i]]
+    return !dayConfig || !dayConfig.enabled
+  }
+
+  function getAvailableSlots() {
+    if (!availability) return timeSlots
+    const dayConfig = availability[fullDayNames[selectedDay]]
+    if (!dayConfig || !dayConfig.enabled) return []
+    const start = timeSlots.indexOf(dayConfig.start)
+    const end = timeSlots.indexOf(dayConfig.end)
+    if (start === -1 || end === -1) return timeSlots
+    return timeSlots.slice(start, end + 1)
+  }
 
   useEffect(() => {
     async function fetchBarber() {
@@ -120,7 +140,7 @@ function BookingPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Day</span>
-              <span className="text-gray-900 font-medium">{days[selectedDay]}, Apr {dates[selectedDay]}</span>
+              <span className="text-gray-900 font-medium">{days[selectedDay]}, {months[selectedDay]} {dates[selectedDay]}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Time</span>
@@ -185,46 +205,54 @@ function BookingPage() {
 
         <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
           <h2 className="text-sm font-medium text-gray-900 mb-4">Select a day</h2>
-          <div className="grid grid-cols-6 gap-2 mb-6">
+          <div className="grid grid-cols-7 gap-2 mb-6">
             {days.map((day, i) => (
               <button
                 key={day}
-                onClick={() => { setSelectedDay(i); setSelectedSlot(null) }}
+                onClick={() => { if (!isDayOff(i)) { setSelectedDay(i); setSelectedSlot(null) } }}
                 className={`flex flex-col items-center py-3 rounded-xl border text-xs transition-all ${
-                  selectedDay === i
+                  isDayOff(i)
+                    ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                    : selectedDay === i
                     ? 'border-purple-600 bg-purple-50 text-purple-700'
                     : 'border-gray-100 text-gray-500 hover:border-gray-200'
                 }`}
               >
                 <span className="font-medium">{day}</span>
-                <span className="text-gray-400 mt-0.5">{dates[i]}</span>
-                <span className="text-gray-400" style={{fontSize: '9px'}}>{months[i]}</span>
+                <span className="mt-0.5">{dates[i]}</span>
+                <span style={{ fontSize: '9px' }}>{months[i]}</span>
               </button>
             ))}
           </div>
 
           <h2 className="text-sm font-medium text-gray-900 mb-4">Select a time</h2>
-          <div className="grid grid-cols-4 gap-2">
-            {timeSlots.map((slot) => {
-              const isBooked = bookedSlots.includes(slot)
-              return (
-                <button
-                  key={slot}
-                  disabled={isBooked}
-                  onClick={() => setSelectedSlot(slot)}
-                  className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    isBooked
-                      ? 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
-                      : selectedSlot === slot
-                      ? 'bg-purple-600 text-white border border-purple-600'
-                      : 'border border-gray-100 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  {slot}
-                </button>
-              )
-            })}
-          </div>
+          {isDayOff(selectedDay) ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-gray-400">This barber is not available on this day.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {getAvailableSlots().map((slot) => {
+                const isBooked = bookedSlots.includes(slot)
+                return (
+                  <button
+                    key={slot}
+                    disabled={isBooked}
+                    onClick={() => setSelectedSlot(slot)}
+                    className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                      isBooked
+                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
+                        : selectedSlot === slot
+                        ? 'bg-purple-600 text-white border border-purple-600'
+                        : 'border border-gray-100 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
