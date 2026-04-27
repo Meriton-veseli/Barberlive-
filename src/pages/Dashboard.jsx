@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth, db } from '../firebase'
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 
 function Dashboard() {
@@ -49,8 +49,12 @@ function Dashboard() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function handleCancel(id) {
+    if (!window.confirm('Cancel this appointment?')) return
+    await deleteDoc(doc(db, 'appointments', id))
+  }
+
   const upcoming = appointments.filter(a => a.status === 'upcoming')
-  const completed = appointments.filter(a => a.status === 'completed')
   const revenue = appointments.reduce((sum, a) => {
     const price = parseFloat(a.price?.replace('$', '') || 0)
     return sum + price
@@ -160,9 +164,17 @@ function Dashboard() {
                     <p className="text-sm text-gray-600">{a.time}</p>
                     <p className="text-xs text-gray-400">{a.day}</p>
                   </div>
-                  <span className="text-xs font-medium px-3 py-1 rounded-full bg-purple-100 text-purple-600">
-                    upcoming
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium px-3 py-1 rounded-full bg-purple-100 text-purple-600">
+                      upcoming
+                    </span>
+                    <button
+                      onClick={() => handleCancel(a.id)}
+                      className="text-xs text-red-400 hover:text-red-500 border border-red-100 hover:border-red-200 px-3 py-1 rounded-full"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ))
             )}
