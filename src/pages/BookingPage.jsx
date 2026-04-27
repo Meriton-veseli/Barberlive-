@@ -12,9 +12,15 @@ const timeSlots = [
   '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
   '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
 ]
-
-const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const dates = ['28', '29', '30', '31', '1', '2']
+const today = new Date()
+const week = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(today)
+  d.setDate(today.getDate() + i)
+  return d
+})
+const days = week.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }))
+const dates = week.map(d => d.getDate().toString())
+const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
 
 function BookingPage() {
   const { username } = useParams()
@@ -43,7 +49,7 @@ function BookingPage() {
     const q = query(
       collection(db, 'appointments'),
       where('username', '==', username),
-      where('day', '==', `${days[selectedDay]}, Apr ${dates[selectedDay]}`)
+      where('day', '==', `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`)
     )
     const unsub = onSnapshot(q, (snap) => {
       setBookedSlots(snap.docs.map(d => d.data().time))
@@ -63,7 +69,7 @@ function BookingPage() {
         service: service.name,
         price: service.price,
         time: selectedSlot,
-        day: `${days[selectedDay]}, Apr ${dates[selectedDay]}`,
+        day: `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`,
         status: 'upcoming',
         createdAt: new Date(),
       })
@@ -192,6 +198,7 @@ function BookingPage() {
               >
                 <span className="font-medium">{day}</span>
                 <span className="text-gray-400 mt-0.5">{dates[i]}</span>
+                <span className="text-gray-400" style={{fontSize: '9px'}}>{months[i]}</span>
               </button>
             ))}
           </div>
