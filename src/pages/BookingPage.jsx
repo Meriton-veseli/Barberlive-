@@ -132,7 +132,7 @@ function BookingPage() {
           <div className="bg-gray-50 rounded-xl p-5 text-left space-y-3 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Barber</span>
-              <span className="text-gray-900 font-medium">@{username}</span>
+              <span className="text-gray-900 font-medium">{barber.displayName || `@${username}`}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Service</span>
@@ -171,13 +171,35 @@ function BookingPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-10">
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-xl font-medium text-purple-600 flex-shrink-0">
-            {username?.slice(0, 2).toUpperCase()}
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-xl font-medium text-purple-600 flex-shrink-0">
+              {username?.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-lg font-medium text-gray-900">
+                {barber.displayName || `@${username}`}
+              </h1>
+              <p className="text-sm text-gray-400">@{username}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-medium text-gray-900">@{username}</h1>
-            <p className="text-sm text-gray-400">Professional barber · Available this week</p>
+          {barber.bio && (
+            <p className="text-sm text-gray-500 leading-relaxed mb-3">{barber.bio}</p>
+          )}
+          <div className="flex items-center gap-4 flex-wrap">
+            {barber.location && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                📍 {barber.location}
+              </span>
+            )}
+            {barber.phone && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                📞 {barber.phone}
+              </span>
+            )}
+            {!barber.location && !barber.phone && (
+              <span className="text-xs text-gray-400">Professional barber · Available this week</span>
+            )}
           </div>
         </div>
 

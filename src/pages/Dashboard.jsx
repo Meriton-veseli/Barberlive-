@@ -23,6 +23,95 @@ const DEFAULT_AVAILABILITY = {
   Sunday:    { enabled: false, start: '9:00 AM', end: '5:00 PM' },
 }
 
+function ProfileTab({ barber, db, auth, setBarber }) {
+  const [form, setForm] = useState({
+    displayName: barber?.displayName || '',
+    bio: barber?.bio || '',
+    location: barber?.location || '',
+    phone: barber?.phone || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const user = auth.currentUser
+    await updateDoc(doc(db, 'barbers', user.uid), form)
+    setBarber(prev => ({ ...prev, ...form }))
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl p-6">
+      <p className="text-sm font-medium text-gray-900 mb-1">Your profile</p>
+      <p className="text-xs text-gray-400 mb-6">This info shows on your public booking page.</p>
+
+      <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-50">
+        <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-xl font-medium text-purple-600 flex-shrink-0">
+          {barber?.username?.slice(0, 2).toUpperCase()}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-900">@{barber?.username}</p>
+          <p className="text-xs text-gray-400">Profile photo coming soon</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs text-gray-400 mb-1 block">Display name</label>
+          <input
+            type="text"
+            placeholder="e.g. John the Barber"
+            value={form.displayName}
+            onChange={e => setForm({ ...form, displayName: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 mb-1 block">Bio</label>
+          <textarea
+            placeholder="Tell clients a bit about yourself..."
+            value={form.bio}
+            onChange={e => setForm({ ...form, bio: e.target.value })}
+            rows={3}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400 resize-none"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 mb-1 block">Location</label>
+          <input
+            type="text"
+            placeholder="e.g. Brooklyn, NY"
+            value={form.location}
+            onChange={e => setForm({ ...form, location: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 mb-1 block">Phone number</label>
+          <input
+            type="tel"
+            placeholder="e.g. +1 234 567 8900"
+            value={form.phone}
+            onChange={e => setForm({ ...form, phone: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="mt-6 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 text-white text-sm font-medium px-6 py-2.5 rounded-lg"
+      >
+        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save profile'}
+      </button>
+    </div>
+  )
+}
+
 function AvailabilityTab({ barber, db, auth }) {
   const [availability, setAvailability] = useState(barber?.availability || DEFAULT_AVAILABILITY)
   const [saved, setSaved] = useState(false)
@@ -217,7 +306,6 @@ function ServicesTab({ barber, db, auth, setBarber }) {
           )}
         </div>
       ))}
-
       <div className="px-6 py-4 border-t border-gray-50">
         {adding ? (
           <div className="flex items-center gap-3 flex-wrap">
@@ -396,7 +484,7 @@ function Dashboard() {
         </div>
 
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-          {['appointments', 'services', 'availability'].map((t) => (
+          {['appointments', 'services', 'availability', 'profile'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -459,6 +547,10 @@ function Dashboard() {
 
         {tab === 'availability' && (
           <AvailabilityTab barber={barber} db={db} auth={auth} />
+        )}
+
+        {tab === 'profile' && (
+          <ProfileTab barber={barber} db={db} auth={auth} setBarber={setBarber} />
         )}
 
       </div>
