@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { db } from '../firebase'
 import {
   collection, query, where, getDocs,
-  addDoc, onSnapshot, doc, getDoc
+  addDoc, onSnapshot
 } from 'firebase/firestore'
 
 const timeSlots = [
@@ -52,7 +52,7 @@ function BookingPage() {
   }, [barber, selectedDay, username])
 
   async function handleConfirm() {
-    if (!selectedService || !selectedSlot || !form.name || !form.phone) return
+    if (selectedService === null || !selectedSlot || !form.name || !form.phone) return
     setLoading(true)
     try {
       const service = barber.services[selectedService]
@@ -126,7 +126,12 @@ function BookingPage() {
             </div>
           </div>
           <button
-            onClick={() => { setStep('book'); setSelectedService(null); setSelectedSlot(null); setForm({ name: '', phone: '' }) }}
+            onClick={() => {
+              setStep('book')
+              setSelectedService(null)
+              setSelectedSlot(null)
+              setForm({ name: '', phone: '' })
+            }}
             className="w-full border border-gray-200 hover:bg-gray-50 text-gray-800 text-sm font-medium py-2.5 rounded-lg"
           >
             Book another appointment
