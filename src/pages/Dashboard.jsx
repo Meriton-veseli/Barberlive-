@@ -97,6 +97,185 @@ function AvailabilityTab({ barber, db, auth }) {
   )
 }
 
+function ServicesTab({ barber, db, auth, setBarber }) {
+  const [services, setServices] = useState(barber?.services || [])
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', duration: '', price: '' })
+  const [adding, setAdding] = useState(false)
+  const [newService, setNewService] = useState({ name: '', duration: '30 min', price: '' })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function saveServices(updated) {
+    setSaving(true)
+    const user = auth.currentUser
+    await updateDoc(doc(db, 'barbers', user.uid), { services: updated })
+    setBarber(prev => ({ ...prev, services: updated }))
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function startEdit(i) {
+    setEditingIndex(i)
+    setEditForm({ ...services[i] })
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null)
+    setEditForm({ name: '', duration: '', price: '' })
+  }
+
+  async function saveEdit() {
+    const updated = services.map((s, i) => i === editingIndex ? editForm : s)
+    setServices(updated)
+    setEditingIndex(null)
+    await saveServices(updated)
+  }
+
+  async function deleteService(i) {
+    if (!window.confirm('Delete this service?')) return
+    const updated = services.filter((_, idx) => idx !== i)
+    setServices(updated)
+    await saveServices(updated)
+  }
+
+  async function addService() {
+    if (!newService.name || !newService.price) return
+    const updated = [...services, newService]
+    setServices(updated)
+    setNewService({ name: '', duration: '30 min', price: '' })
+    setAdding(false)
+    await saveServices(updated)
+  }
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      {services.map((s, i) => (
+        <div key={i} className={`px-6 py-4 ${i !== services.length - 1 ? 'border-b border-gray-50' : ''}`}>
+          {editingIndex === i ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Service name"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400 min-w-32"
+              />
+              <input
+                type="text"
+                value={editForm.duration}
+                onChange={e => setEditForm({ ...editForm, duration: e.target.value })}
+                placeholder="Duration"
+                className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
+              />
+              <input
+                type="text"
+                value={editForm.price}
+                onChange={e => setEditForm({ ...editForm, price: e.target.value })}
+                placeholder="Price"
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveEdit}
+                  disabled={saving}
+                  className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                <p className="text-xs text-gray-400">{s.duration}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-900">${s.price}</span>
+                <button
+                  onClick={() => startEdit(i)}
+                  className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-1.5 rounded-lg"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteService(i)}
+                  className="text-xs border border-red-100 hover:border-red-200 text-red-400 hover:text-red-500 px-3 py-1.5 rounded-lg"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div className="px-6 py-4 border-t border-gray-50">
+        {adding ? (
+          <div className="flex items-center gap-3 flex-wrap">
+            <input
+              type="text"
+              value={newService.name}
+              onChange={e => setNewService({ ...newService, name: e.target.value })}
+              placeholder="Service name"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400 min-w-32"
+            />
+            <input
+              type="text"
+              value={newService.duration}
+              onChange={e => setNewService({ ...newService, duration: e.target.value })}
+              placeholder="Duration"
+              className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
+            />
+            <input
+              type="text"
+              value={newService.price}
+              onChange={e => setNewService({ ...newService, price: e.target.value })}
+              placeholder="Price"
+              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={addService}
+                disabled={!newService.name || !newService.price}
+                className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 text-white px-3 py-2 rounded-lg"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setAdding(false)}
+                className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-sm text-purple-600 font-medium hover:underline"
+          >
+            + Add service
+          </button>
+        )}
+      </div>
+      {saved && (
+        <div className="px-6 py-3 bg-green-50 border-t border-green-100">
+          <p className="text-xs text-green-600">Services saved successfully!</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Dashboard() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('appointments')
@@ -275,23 +454,8 @@ function Dashboard() {
         )}
 
         {tab === 'services' && (
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-            {barber?.services?.map((s, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between px-6 py-4 ${
-                  i !== barber.services.length - 1 ? 'border-b border-gray-50' : ''
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                  <p className="text-xs text-gray-400">{s.duration}</p>
-                </div>
-                <span className="text-sm font-medium text-gray-900">${s.price}</span>
-              </div>
-            ))}
-          </div>
-)}
+          <ServicesTab barber={barber} db={db} auth={auth} setBarber={setBarber} />
+        )}
 
         {tab === 'availability' && (
           <AvailabilityTab barber={barber} db={db} auth={auth} />
