@@ -13,6 +13,8 @@ const timeSlots = [
   '5:00 PM', '5:30 PM', '6:00 PM',
 ]
 
+const SERVICE_ICONS = ['✂️', '🪒', '💈', '👦', '🧔', '💇']
+
 function BookingPage() {
   const { username } = useParams()
   const [barber, setBarber] = useState(null)
@@ -35,7 +37,6 @@ function BookingPage() {
   const dates = week.map(d => d.getDate().toString())
   const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
   const fullDayNames = week.map(d => d.toLocaleDateString('en-US', { weekday: 'long' }))
-
   const availability = barber?.availability || null
 
   function isDayOff(i) {
@@ -103,10 +104,11 @@ function BookingPage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-violet-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-2xl mb-2">✂️</p>
-          <p className="text-sm text-gray-400">This barber page doesn't exist.</p>
+          <p className="text-5xl mb-4">✂️</p>
+          <p className="text-gray-900 font-black text-xl mb-2">Page not found</p>
+          <p className="text-gray-400 text-sm">This barber page doesn't exist.</p>
         </div>
       </div>
     )
@@ -114,143 +116,156 @@ function BookingPage() {
 
   if (!barber) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-violet-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Loading...</p>
+        </div>
       </div>
     )
   }
 
   if (step === 'confirmed') {
+    const service = barber.services[selectedService]
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white border border-gray-100 rounded-2xl p-10 max-w-md w-full text-center">
-          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <span className="text-green-600 text-2xl">✓</span>
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-3xl shadow-xl shadow-violet-100 p-8 text-center border border-violet-100">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-100">
+              <span className="text-white text-3xl font-black">✓</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">You're booked!</h2>
+            <p className="text-gray-400 text-sm mb-8">See you soon, {form.name.split(' ')[0]}. 👋</p>
+
+            <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 text-left space-y-3 mb-6 border border-violet-100">
+              {[
+                { label: 'Barber', value: barber.displayName || `@${username}` },
+                { label: 'Service', value: service?.name },
+                { label: 'Price', value: `$${service?.price}` },
+                { label: 'Date', value: `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}` },
+                { label: 'Time', value: selectedSlot },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">{label}</span>
+                  <span className="text-sm font-bold text-gray-900">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setStep('book')
+                setSelectedService(null)
+                setSelectedSlot(null)
+                setForm({ name: '', phone: '' })
+              }}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-3 rounded-2xl transition-all"
+            >
+              Book another appointment
+            </button>
           </div>
-          <h2 className="text-2xl font-medium text-gray-900 mb-2">Booking confirmed!</h2>
-          <p className="text-gray-400 text-sm mb-6">You'll receive a confirmation shortly.</p>
-          <div className="bg-gray-50 rounded-xl p-5 text-left space-y-3 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Barber</span>
-              <span className="text-gray-900 font-medium">{barber.displayName || `@${username}`}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Service</span>
-              <span className="text-gray-900 font-medium">{barber.services[selectedService]?.name}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Day</span>
-              <span className="text-gray-900 font-medium">{days[selectedDay]}, {months[selectedDay]} {dates[selectedDay]}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Time</span>
-              <span className="text-gray-900 font-medium">{selectedSlot}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Name</span>
-              <span className="text-gray-900 font-medium">{form.name}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setStep('book')
-              setSelectedService(null)
-              setSelectedSlot(null)
-              setForm({ name: '', phone: '' })
-            }}
-            className="w-full border border-gray-200 hover:bg-gray-50 text-gray-800 text-sm font-medium py-2.5 rounded-lg"
-          >
-            Book another appointment
-          </button>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Powered by <span className="text-violet-600 font-black">barbr</span>
+          </p>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-10">
+  const selectedServiceData = selectedService !== null ? barber.services[selectedService] : null
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-xl font-medium text-purple-600 flex-shrink-0">
-              {username?.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-lg font-medium text-gray-900">
-                {barber.displayName || `@${username}`}
-              </h1>
-              <p className="text-sm text-gray-400">@{username}</p>
-            </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
+
+      {/* barber profile header */}
+      <div className="bg-white border-b border-gray-100 px-6 py-8">
+        <div className="max-w-2xl mx-auto flex items-center gap-5">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white flex-shrink-0 shadow-lg shadow-violet-200">
+            {username?.slice(0, 2).toUpperCase()}
           </div>
-          {barber.bio && (
-            <p className="text-sm text-gray-500 leading-relaxed mb-3">{barber.bio}</p>
-          )}
-          <div className="flex items-center gap-4 flex-wrap">
-            {barber.location && (
-              <span className="text-xs text-gray-400 flex items-center gap-1">
-                📍 {barber.location}
-              </span>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black text-gray-900 mb-0.5">
+              {barber.displayName || `@${username}`}
+            </h1>
+            <p className="text-sm text-violet-500 font-semibold mb-2">@{username}</p>
+            {barber.bio && (
+              <p className="text-sm text-gray-500 leading-relaxed mb-2">{barber.bio}</p>
             )}
-            {barber.phone && (
-              <span className="text-xs text-gray-400 flex items-center gap-1">
-                📞 {barber.phone}
-              </span>
-            )}
-            {!barber.location && !barber.phone && (
-              <span className="text-xs text-gray-400">Professional barber · Available this week</span>
-            )}
+            <div className="flex items-center gap-3 flex-wrap">
+              {barber.location && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
+                  📍 {barber.location}
+                </span>
+              )}
+              {barber.phone && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
+                  📞 {barber.phone}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
-          <h2 className="text-sm font-medium text-gray-900 mb-4">Select a service</h2>
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+
+        {/* services */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Choose a service</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {barber.services.map((s, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedService(i)}
-                className={`text-left p-4 rounded-xl border transition-all ${
+                className={`text-left p-4 rounded-2xl border-2 transition-all ${
                   selectedService === i
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-100 hover:border-gray-200'
+                    ? 'border-violet-500 bg-violet-50 shadow-md shadow-violet-100'
+                    : 'border-gray-100 hover:border-violet-200 bg-gray-50 hover:bg-violet-50/50'
                 }`}
               >
-                <p className={`text-sm font-medium mb-1 ${selectedService === i ? 'text-purple-700' : 'text-gray-900'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl">{SERVICE_ICONS[i % SERVICE_ICONS.length]}</span>
+                  <span className={`text-base font-black ${selectedService === i ? 'text-violet-600' : 'text-gray-700'}`}>
+                    ${s.price}
+                  </span>
+                </div>
+                <p className={`text-sm font-bold mb-0.5 ${selectedService === i ? 'text-violet-700' : 'text-gray-900'}`}>
                   {s.name}
                 </p>
-                <p className="text-xs text-gray-400">{s.duration} · ${s.price}</p>
+                <p className="text-xs text-gray-400">{s.duration}</p>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
-          <h2 className="text-sm font-medium text-gray-900 mb-4">Select a day</h2>
+        {/* day + time picker */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Pick a day</p>
           <div className="grid grid-cols-7 gap-2 mb-6">
             {days.map((day, i) => (
               <button
                 key={day}
                 onClick={() => { if (!isDayOff(i)) { setSelectedDay(i); setSelectedSlot(null) } }}
-                className={`flex flex-col items-center py-3 rounded-xl border text-xs transition-all ${
+                className={`flex flex-col items-center py-3 rounded-2xl text-xs transition-all ${
                   isDayOff(i)
-                    ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                     : selectedDay === i
-                    ? 'border-purple-600 bg-purple-50 text-purple-700'
-                    : 'border-gray-100 text-gray-500 hover:border-gray-200'
+                    ? 'bg-gradient-to-b from-violet-600 to-purple-700 text-white shadow-lg shadow-violet-200'
+                    : 'bg-gray-50 text-gray-500 hover:bg-violet-50 hover:text-violet-600'
                 }`}
               >
-                <span className="font-medium">{day}</span>
-                <span className="mt-0.5">{dates[i]}</span>
-                <span style={{ fontSize: '9px' }}>{months[i]}</span>
+                <span className="font-bold">{day}</span>
+                <span className="font-black text-sm mt-0.5">{dates[i]}</span>
+                <span style={{ fontSize: '9px' }} className="opacity-70 mt-0.5">{months[i]}</span>
               </button>
             ))}
           </div>
 
-          <h2 className="text-sm font-medium text-gray-900 mb-4">Select a time</h2>
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Pick a time</p>
           {isDayOff(selectedDay) ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-gray-400">This barber is not available on this day.</p>
+            <div className="py-10 text-center bg-gray-50 rounded-2xl">
+              <p className="text-2xl mb-2">😴</p>
+              <p className="text-sm text-gray-400 font-medium">Not available on this day</p>
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-2">
@@ -261,12 +276,12 @@ function BookingPage() {
                     key={slot}
                     disabled={isBooked}
                     onClick={() => setSelectedSlot(slot)}
-                    className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`py-3 rounded-2xl text-xs font-bold transition-all ${
                       isBooked
-                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
+                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed line-through'
                         : selectedSlot === slot
-                        ? 'bg-purple-600 text-white border border-purple-600'
-                        : 'border border-gray-100 text-gray-600 hover:border-gray-300'
+                        ? 'bg-gradient-to-b from-violet-600 to-purple-700 text-white shadow-md shadow-violet-200'
+                        : 'bg-gray-50 text-gray-600 hover:bg-violet-50 hover:text-violet-600'
                     }`}
                   >
                     {slot}
@@ -277,33 +292,59 @@ function BookingPage() {
           )}
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-5">
-          <h2 className="text-sm font-medium text-gray-900 mb-4">Your details</h2>
+        {/* details */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Your details</p>
           <div className="space-y-3">
             <input
               type="text"
-              placeholder="Your name"
+              placeholder="Your full name"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-purple-400"
+              className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
             />
             <input
               type="tel"
               placeholder="Phone number"
               value={form.phone}
               onChange={e => setForm({ ...form, phone: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-purple-400"
+              className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
             />
           </div>
         </div>
 
+        {/* summary */}
+        {selectedServiceData && selectedSlot && (
+          <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-5 text-white shadow-lg shadow-violet-200">
+            <p className="text-xs font-black uppercase tracking-widest text-violet-200 mb-3">Booking summary</p>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-violet-100">{selectedServiceData.name}</span>
+              <span className="text-lg font-black">${selectedServiceData.price}</span>
+            </div>
+            <div className="flex items-center justify-between text-violet-200 text-xs font-medium">
+              <span>{days[selectedDay]}, {months[selectedDay]} {dates[selectedDay]}</span>
+              <span>{selectedSlot}</span>
+            </div>
+          </div>
+        )}
+
+        {/* confirm button */}
         <button
           onClick={handleConfirm}
           disabled={selectedService === null || !selectedSlot || !form.name || !form.phone || loading}
-          className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl text-sm transition-all"
+          className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl text-sm transition-all hover:shadow-xl hover:shadow-violet-200 hover:-translate-y-0.5"
         >
-          {loading ? 'Confirming...' : 'Confirm booking'}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Confirming...
+            </span>
+          ) : 'Confirm booking →'}
         </button>
+
+        <p className="text-center text-xs text-gray-400 pb-4">
+          Powered by <span className="text-violet-600 font-black">barbr</span>
+        </p>
 
       </div>
     </div>
