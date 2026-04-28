@@ -44,59 +44,45 @@ function ProfileTab({ barber, db, auth, setBarber }) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-6">
-      <p className="text-sm font-medium text-gray-900 mb-1">Your profile</p>
-      <p className="text-xs text-gray-400 mb-6">This info shows on your public booking page.</p>
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+      <p className="text-base font-black text-gray-900 mb-1">Your profile</p>
+      <p className="text-xs text-gray-400 mb-8">This info shows on your public booking page.</p>
 
-      <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-50">
-        <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-xl font-medium text-purple-600 flex-shrink-0">
+      <div className="flex items-center gap-5 mb-8 pb-8 border-b border-gray-100">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white flex-shrink-0 shadow-lg shadow-violet-200">
           {barber?.username?.slice(0, 2).toUpperCase()}
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900">@{barber?.username}</p>
-          <p className="text-xs text-gray-400">Profile photo coming soon</p>
+          <p className="text-sm font-black text-gray-900">@{barber?.username}</p>
+          <p className="text-xs text-gray-400 mt-1">Profile photo coming soon</p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {[
+          { label: 'Display name', key: 'displayName', placeholder: 'e.g. John the Barber', type: 'text' },
+          { label: 'Location', key: 'location', placeholder: 'e.g. Brooklyn, NY', type: 'text' },
+          { label: 'Phone number', key: 'phone', placeholder: 'e.g. +1 234 567 8900', type: 'tel' },
+        ].map(({ label, key, placeholder, type }) => (
+          <div key={key}>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">{label}</label>
+            <input
+              type={type}
+              placeholder={placeholder}
+              value={form[key]}
+              onChange={e => setForm({ ...form, [key]: e.target.value })}
+              className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all"
+            />
+          </div>
+        ))}
         <div>
-          <label className="text-xs text-gray-400 mb-1 block">Display name</label>
-          <input
-            type="text"
-            placeholder="e.g. John the Barber"
-            value={form.displayName}
-            onChange={e => setForm({ ...form, displayName: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 mb-1 block">Bio</label>
+          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Bio</label>
           <textarea
             placeholder="Tell clients a bit about yourself..."
             value={form.bio}
             onChange={e => setForm({ ...form, bio: e.target.value })}
             rows={3}
-            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400 resize-none"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 mb-1 block">Location</label>
-          <input
-            type="text"
-            placeholder="e.g. Brooklyn, NY"
-            value={form.location}
-            onChange={e => setForm({ ...form, location: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 mb-1 block">Phone number</label>
-          <input
-            type="tel"
-            placeholder="e.g. +1 234 567 8900"
-            value={form.phone}
-            onChange={e => setForm({ ...form, phone: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-purple-400"
+            className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all resize-none"
           />
         </div>
       </div>
@@ -104,9 +90,9 @@ function ProfileTab({ barber, db, auth, setBarber }) {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="mt-6 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 text-white text-sm font-medium px-6 py-2.5 rounded-lg"
+        className="mt-6 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 text-white text-sm font-bold px-8 py-3 rounded-2xl transition-all hover:shadow-lg hover:shadow-violet-200"
       >
-        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save profile'}
+        {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save profile'}
       </button>
     </div>
   )
@@ -118,10 +104,7 @@ function AvailabilityTab({ barber, db, auth }) {
   const [saving, setSaving] = useState(false)
 
   function update(day, field, value) {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: { ...prev[day], [field]: value }
-    }))
+    setAvailability(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }))
   }
 
   async function handleSave() {
@@ -134,20 +117,20 @@ function AvailabilityTab({ barber, db, auth }) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-6">
-      <p className="text-sm font-medium text-gray-900 mb-1">Weekly availability</p>
-      <p className="text-xs text-gray-400 mb-6">Set the hours clients can book you each day.</p>
-      <div className="space-y-3">
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+      <p className="text-base font-black text-gray-900 mb-1">Weekly availability</p>
+      <p className="text-xs text-gray-400 mb-8">Set the hours clients can book you each day.</p>
+      <div className="space-y-2">
         {DAYS_OF_WEEK.map((day) => (
-          <div key={day} className="flex items-center gap-4 py-3 border-b border-gray-50">
-            <div className="w-24 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={availability[day]?.enabled}
-                onChange={e => update(day, 'enabled', e.target.checked)}
-                className="accent-purple-600"
-              />
-              <span className={`text-sm ${availability[day]?.enabled ? 'text-gray-700' : 'text-gray-300'}`}>
+          <div key={day} className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${availability[day]?.enabled ? 'bg-violet-50 border border-violet-100' : 'bg-gray-50 border border-gray-100'}`}>
+            <div className="w-28 flex items-center gap-3">
+              <div
+                onClick={() => update(day, 'enabled', !availability[day]?.enabled)}
+                className={`w-10 h-6 rounded-full cursor-pointer transition-all relative flex-shrink-0 ${availability[day]?.enabled ? 'bg-violet-600' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${availability[day]?.enabled ? 'left-5' : 'left-1'}`} />
+              </div>
+              <span className={`text-sm font-bold ${availability[day]?.enabled ? 'text-gray-800' : 'text-gray-400'}`}>
                 {day.slice(0, 3)}
               </span>
             </div>
@@ -156,21 +139,21 @@ function AvailabilityTab({ barber, db, auth }) {
                 <select
                   value={availability[day]?.start}
                   onChange={e => update(day, 'start', e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 outline-none"
+                  className="text-sm bg-white border-2 border-violet-100 rounded-xl px-3 py-1.5 text-gray-700 outline-none focus:border-violet-400"
                 >
                   {ALL_SLOTS.map(s => <option key={s}>{s}</option>)}
                 </select>
-                <span className="text-gray-300 text-xs">to</span>
+                <span className="text-gray-400 text-xs font-bold">→</span>
                 <select
                   value={availability[day]?.end}
                   onChange={e => update(day, 'end', e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 outline-none"
+                  className="text-sm bg-white border-2 border-violet-100 rounded-xl px-3 py-1.5 text-gray-700 outline-none focus:border-violet-400"
                 >
                   {ALL_SLOTS.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             ) : (
-              <span className="text-xs text-gray-300">Day off</span>
+              <span className="text-xs text-gray-400 font-medium">Day off</span>
             )}
           </div>
         ))}
@@ -178,9 +161,9 @@ function AvailabilityTab({ barber, db, auth }) {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="mt-6 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 text-white text-sm font-medium px-6 py-2.5 rounded-lg"
+        className="mt-6 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 text-white text-sm font-bold px-8 py-3 rounded-2xl transition-all hover:shadow-lg hover:shadow-violet-200"
       >
-        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save availability'}
+        {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save availability'}
       </button>
     </div>
   )
@@ -205,28 +188,19 @@ function ServicesTab({ barber, db, auth, setBarber }) {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  function startEdit(i) {
-    setEditingIndex(i)
-    setEditForm({ ...services[i] })
-  }
-
-  function cancelEdit() {
-    setEditingIndex(null)
-    setEditForm({ name: '', duration: '', price: '' })
-  }
+  function startEdit(i) { setEditingIndex(i); setEditForm({ ...services[i] }) }
+  function cancelEdit() { setEditingIndex(null) }
 
   async function saveEdit() {
     const updated = services.map((s, i) => i === editingIndex ? editForm : s)
-    setServices(updated)
-    setEditingIndex(null)
+    setServices(updated); setEditingIndex(null)
     await saveServices(updated)
   }
 
   async function deleteService(i) {
     if (!window.confirm('Delete this service?')) return
     const updated = services.filter((_, idx) => idx !== i)
-    setServices(updated)
-    await saveServices(updated)
+    setServices(updated); await saveServices(updated)
   }
 
   async function addService() {
@@ -234,130 +208,73 @@ function ServicesTab({ barber, db, auth, setBarber }) {
     const updated = [...services, newService]
     setServices(updated)
     setNewService({ name: '', duration: '30 min', price: '' })
-    setAdding(false)
-    await saveServices(updated)
+    setAdding(false); await saveServices(updated)
   }
 
+  const inputCls = "bg-gray-50 border-2 border-gray-100 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all"
+
   return (
-    <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-gray-50">
+        <p className="text-base font-black text-gray-900">Services</p>
+        <p className="text-xs text-gray-400 mt-1">Manage what clients can book</p>
+      </div>
+
       {services.map((s, i) => (
         <div key={i} className={`px-6 py-4 ${i !== services.length - 1 ? 'border-b border-gray-50' : ''}`}>
           {editingIndex === i ? (
             <div className="flex items-center gap-3 flex-wrap">
-              <input
-                type="text"
-                value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                placeholder="Service name"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400 min-w-32"
-              />
-              <input
-                type="text"
-                value={editForm.duration}
-                onChange={e => setEditForm({ ...editForm, duration: e.target.value })}
-                placeholder="Duration"
-                className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
-              />
-              <input
-                type="text"
-                value={editForm.price}
-                onChange={e => setEditForm({ ...editForm, price: e.target.value })}
-                placeholder="Price"
-                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
-              />
+              <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Service name" className={`flex-1 min-w-32 ${inputCls}`} />
+              <input type="text" value={editForm.duration} onChange={e => setEditForm({ ...editForm, duration: e.target.value })} placeholder="Duration" className={`w-24 ${inputCls}`} />
+              <input type="text" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} placeholder="Price" className={`w-20 ${inputCls}`} />
               <div className="flex gap-2">
-                <button
-                  onClick={saveEdit}
-                  disabled={saving}
-                  className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg"
-                >
-                  {saving ? 'Saving...' : 'Save'}
+                <button onClick={saveEdit} disabled={saving} className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl font-bold">
+                  {saving ? '...' : 'Save'}
                 </button>
-                <button
-                  onClick={cancelEdit}
-                  className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-2 rounded-lg"
-                >
-                  Cancel
-                </button>
+                <button onClick={cancelEdit} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-xl font-bold">Cancel</button>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                <p className="text-xs text-gray-400">{s.duration}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-violet-50 flex items-center justify-center text-lg flex-shrink-0">✂️</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{s.name}</p>
+                  <p className="text-xs text-gray-400">{s.duration}</p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-900">${s.price}</span>
-                <button
-                  onClick={() => startEdit(i)}
-                  className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-1.5 rounded-lg"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteService(i)}
-                  className="text-xs border border-red-100 hover:border-red-200 text-red-400 hover:text-red-500 px-3 py-1.5 rounded-lg"
-                >
-                  Delete
-                </button>
+                <span className="text-sm font-black text-violet-600">${s.price}</span>
+                <button onClick={() => startEdit(i)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-xl font-bold transition-all">Edit</button>
+                <button onClick={() => deleteService(i)} className="text-xs bg-red-50 hover:bg-red-100 text-red-500 px-3 py-1.5 rounded-xl font-bold transition-all">Delete</button>
               </div>
             </div>
           )}
         </div>
       ))}
-      <div className="px-6 py-4 border-t border-gray-50">
+
+      <div className="px-6 py-5 bg-gray-50">
         {adding ? (
           <div className="flex items-center gap-3 flex-wrap">
-            <input
-              type="text"
-              value={newService.name}
-              onChange={e => setNewService({ ...newService, name: e.target.value })}
-              placeholder="Service name"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400 min-w-32"
-            />
-            <input
-              type="text"
-              value={newService.duration}
-              onChange={e => setNewService({ ...newService, duration: e.target.value })}
-              placeholder="Duration"
-              className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
-            />
-            <input
-              type="text"
-              value={newService.price}
-              onChange={e => setNewService({ ...newService, price: e.target.value })}
-              placeholder="Price"
-              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
-            />
+            <input type="text" value={newService.name} onChange={e => setNewService({ ...newService, name: e.target.value })} placeholder="Service name" className={`flex-1 min-w-32 ${inputCls}`} />
+            <input type="text" value={newService.duration} onChange={e => setNewService({ ...newService, duration: e.target.value })} placeholder="Duration" className={`w-24 ${inputCls}`} />
+            <input type="text" value={newService.price} onChange={e => setNewService({ ...newService, price: e.target.value })} placeholder="Price" className={`w-20 ${inputCls}`} />
             <div className="flex gap-2">
-              <button
-                onClick={addService}
-                disabled={!newService.name || !newService.price}
-                className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 text-white px-3 py-2 rounded-lg"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => setAdding(false)}
-                className="text-xs border border-gray-200 hover:bg-gray-50 text-gray-500 px-3 py-2 rounded-lg"
-              >
-                Cancel
-              </button>
+              <button onClick={addService} disabled={!newService.name || !newService.price} className="text-xs bg-violet-600 hover:bg-violet-700 disabled:bg-violet-200 text-white px-4 py-2 rounded-xl font-bold">Add</button>
+              <button onClick={() => setAdding(false)} className="text-xs bg-white hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-xl font-bold border border-gray-200">Cancel</button>
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setAdding(true)}
-            className="text-sm text-purple-600 font-medium hover:underline"
-          >
-            + Add service
+          <button onClick={() => setAdding(true)} className="text-sm text-violet-600 font-black hover:text-violet-700 flex items-center gap-2">
+            <span className="w-6 h-6 bg-violet-100 rounded-lg flex items-center justify-center text-base leading-none">+</span>
+            Add service
           </button>
         )}
       </div>
+
       {saved && (
         <div className="px-6 py-3 bg-green-50 border-t border-green-100">
-          <p className="text-xs text-green-600">Services saved successfully!</p>
+          <p className="text-xs text-green-600 font-bold">✓ Services saved successfully!</p>
         </div>
       )}
     </div>
@@ -375,12 +292,9 @@ function Dashboard() {
   useEffect(() => {
     const user = auth.currentUser
     if (!user) { navigate('/login'); return }
-
     async function fetchBarber() {
       const snap = await getDoc(doc(db, 'barbers', user.uid))
-      if (snap.exists()) {
-        setBarber(snap.data())
-      }
+      if (snap.exists()) setBarber(snap.data())
       setLoading(false)
     }
     fetchBarber()
@@ -388,20 +302,14 @@ function Dashboard() {
 
   useEffect(() => {
     if (!barber) return
-    const q = query(
-      collection(db, 'appointments'),
-      where('username', '==', barber.username)
-    )
+    const q = query(collection(db, 'appointments'), where('username', '==', barber.username))
     const unsub = onSnapshot(q, (snap) => {
       setAppointments(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
     return () => unsub()
   }, [barber])
 
-  async function handleLogout() {
-    await signOut(auth)
-    navigate('/')
-  }
+  async function handleLogout() { await signOut(auth); navigate('/') }
 
   function copyLink() {
     navigator.clipboard.writeText(`barbr.app/${barber.username}`)
@@ -415,81 +323,107 @@ function Dashboard() {
   }
 
   const upcoming = appointments.filter(a => a.status === 'upcoming')
-  const revenue = appointments.reduce((sum, a) => {
-    const price = parseFloat(a.price?.replace('$', '') || 0)
-    return sum + price
-  }, 0)
+  const revenue = appointments.reduce((sum, a) => sum + parseFloat(a.price?.replace('$', '') || 0), 0)
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-400">Loading your dashboard...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
-        <div className="text-xl font-medium tracking-tight">
-          barb<span className="text-purple-600">r</span>
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
+
+      {/* navbar */}
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div className="text-2xl font-black tracking-tight text-gray-900">
+          barb<span className="text-violet-600">r</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">@{barber?.username}</span>
+          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-black">
+              {barber?.username?.slice(0, 1).toUpperCase()}
+            </div>
+            <span className="text-sm font-semibold text-gray-700">@{barber?.username}</span>
+          </div>
           <button
             onClick={handleLogout}
-            className="text-sm border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-lg text-gray-600"
+            className="text-sm border-2 border-gray-100 hover:border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-2xl text-gray-500 font-semibold transition-all"
           >
             Log out
           </button>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Total bookings</p>
-            <p className="text-3xl font-medium text-gray-900">{appointments.length}</p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Upcoming</p>
-            <p className="text-3xl font-medium text-gray-900">{upcoming.length}</p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Est. revenue</p>
-            <p className="text-3xl font-medium text-gray-900">${revenue}</p>
-          </div>
+        {/* greeting */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-black text-gray-900 mb-1">
+            {greeting}, @{barber?.username} 👋
+          </h1>
+          <p className="text-gray-400 text-sm">Here's what's happening with your bookings today.</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-xl p-5 mb-6 flex items-center justify-between gap-4">
+        {/* stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {[
+            { label: 'Total bookings', value: appointments.length, icon: '📅', gradient: 'from-violet-500 to-purple-600' },
+            { label: 'Upcoming', value: upcoming.length, icon: '⏰', gradient: 'from-blue-500 to-indigo-600' },
+            { label: 'Est. revenue', value: `$${revenue}`, icon: '💰', gradient: 'from-emerald-500 to-green-600' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-xl shadow-md flex-shrink-0`}>
+                {stat.icon}
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">{stat.label}</p>
+                <p className="text-3xl font-black text-gray-900">{stat.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* booking link card */}
+        <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-6 mb-6 flex items-center justify-between gap-4 shadow-lg shadow-violet-200">
           <div>
-            <p className="text-xs text-gray-400 mb-1">Your booking link</p>
-            <p className="text-sm text-purple-600 font-medium">barbr.app/{barber?.username}</p>
+            <p className="text-xs text-violet-200 font-bold uppercase tracking-wider mb-1">Your booking link</p>
+            <p className="text-white font-black text-lg">barbr.app/{barber?.username}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={copyLink}
-              className="text-sm bg-purple-100 hover:bg-purple-200 text-purple-600 font-medium px-4 py-2 rounded-lg"
+              className="text-sm bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-2xl transition-all backdrop-blur-sm"
             >
-              {copied ? 'Copied!' : 'Copy link'}
+              {copied ? '✓ Copied!' : 'Copy link'}
             </button>
             <button
               onClick={() => navigate(`/${barber?.username}`)}
-              className="text-sm border border-gray-200 hover:bg-gray-50 text-gray-600 px-4 py-2 rounded-lg"
+              className="text-sm bg-white text-violet-700 hover:bg-violet-50 font-bold px-4 py-2.5 rounded-2xl transition-all shadow-sm"
             >
               Preview
             </button>
           </div>
         </div>
 
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        {/* tabs */}
+        <div className="flex gap-1 mb-6 bg-white border border-gray-100 shadow-sm p-1.5 rounded-2xl w-fit">
           {['appointments', 'services', 'availability', 'profile'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all ${
-                tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
+                tab === t
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md'
+                  : 'text-gray-400 hover:text-gray-700'
               }`}
             >
               {t}
@@ -497,40 +431,47 @@ function Dashboard() {
           ))}
         </div>
 
+        {/* appointments */}
         {tab === 'appointments' && (
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50">
+              <p className="text-base font-black text-gray-900">Appointments</p>
+              <p className="text-xs text-gray-400 mt-1">{appointments.length} total · {upcoming.length} upcoming</p>
+            </div>
             {appointments.length === 0 ? (
-              <div className="px-6 py-12 text-center">
-                <p className="text-sm text-gray-400">No appointments yet. Share your booking link to get started!</p>
+              <div className="px-6 py-16 text-center">
+                <p className="text-4xl mb-4">📭</p>
+                <p className="text-sm font-bold text-gray-400">No appointments yet</p>
+                <p className="text-xs text-gray-300 mt-1">Share your booking link to get started!</p>
               </div>
             ) : (
               appointments.map((a, i) => (
                 <div
                   key={a.id}
-                  className={`flex items-center justify-between px-6 py-4 ${
+                  className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors ${
                     i !== appointments.length - 1 ? 'border-b border-gray-50' : ''
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-xs font-medium text-purple-600 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xs font-black text-white flex-shrink-0">
                       {a.clientName?.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{a.clientName}</p>
+                      <p className="text-sm font-bold text-gray-900">{a.clientName}</p>
                       <p className="text-xs text-gray-400">{a.service}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">{a.time}</p>
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-gray-700">{a.time}</p>
                     <p className="text-xs text-gray-400">{a.day}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium px-3 py-1 rounded-full bg-purple-100 text-purple-600">
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">
                       upcoming
                     </span>
                     <button
                       onClick={() => handleCancel(a.id)}
-                      className="text-xs text-red-400 hover:text-red-500 border border-red-100 hover:border-red-200 px-3 py-1 rounded-full"
+                      className="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-1.5 rounded-full transition-all"
                     >
                       Cancel
                     </button>
@@ -541,17 +482,9 @@ function Dashboard() {
           </div>
         )}
 
-        {tab === 'services' && (
-          <ServicesTab barber={barber} db={db} auth={auth} setBarber={setBarber} />
-        )}
-
-        {tab === 'availability' && (
-          <AvailabilityTab barber={barber} db={db} auth={auth} />
-        )}
-
-        {tab === 'profile' && (
-          <ProfileTab barber={barber} db={db} auth={auth} setBarber={setBarber} />
-        )}
+        {tab === 'services' && <ServicesTab barber={barber} db={db} auth={auth} setBarber={setBarber} />}
+        {tab === 'availability' && <AvailabilityTab barber={barber} db={db} auth={auth} />}
+        {tab === 'profile' && <ProfileTab barber={barber} db={db} auth={auth} setBarber={setBarber} />}
 
       </div>
     </div>
