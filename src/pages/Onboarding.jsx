@@ -9,6 +9,8 @@ const defaultServices = [
   { name: 'Beard Trim', duration: '20 min', price: '15' },
 ]
 
+const inputCls = "w-full bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-violet-400 transition-all shadow-sm"
+
 function Onboarding() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
@@ -72,111 +74,183 @@ function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white border border-gray-100 rounded-2xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg">
 
+        {/* logo */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-medium tracking-tight mb-1">
-            barb<span className="text-purple-600">r</span>
-          </h1>
-          <p className="text-sm text-gray-400">
-            {step === 1 ? 'Choose your booking link' : 'Set up your services'}
-          </p>
+          <div className="text-3xl font-black tracking-tight text-gray-900 mb-2">
+            barb<span className="text-violet-600">r</span>
+          </div>
+          <p className="text-gray-400 text-sm">Let's get you set up in 2 quick steps</p>
         </div>
 
-        <div className="flex gap-2 mb-8">
-          {[1, 2].map(s => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-purple-600' : 'bg-gray-100'}`}
-            />
+        {/* progress */}
+        <div className="flex items-center gap-3 mb-8 max-w-xs mx-auto">
+          {[1, 2].map((s, i) => (
+            <div key={s} className="flex items-center gap-3 flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all ${
+                s < step ? 'bg-green-500 text-white' :
+                s === step ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-md shadow-violet-200' :
+                'bg-gray-100 text-gray-400'
+              }`}>
+                {s < step ? '✓' : s}
+              </div>
+              {i < 1 && (
+                <div className={`flex-1 h-0.5 rounded-full transition-all ${s < step ? 'bg-violet-600' : 'bg-gray-100'}`} />
+              )}
+            </div>
           ))}
         </div>
 
-        {step === 1 && (
-          <div>
-            <p className="text-sm text-gray-500 mb-4">
-              This will be the link you share with your clients.
-            </p>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden mb-2 focus-within:border-purple-400">
-              <span className="px-3 py-2.5 bg-gray-50 text-sm text-gray-400 border-r border-gray-200">
-                barbr.app/
-              </span>
-              <input
-                type="text"
-                placeholder="your-name"
-                value={username}
-                onChange={e => {
-                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-                  setUsernameError('')
-                }}
-                className="flex-1 px-3 py-2.5 text-sm outline-none"
-              />
-            </div>
-            {usernameError && (
-              <p className="text-xs text-red-500 mb-3">{usernameError}</p>
-            )}
-            {username.length >= 3 && !usernameError && (
-              <p className="text-xs text-green-600 mb-3">
-                barbr.app/{username} is available ✓
-              </p>
-            )}
-            <button
-              onClick={checkUsername}
-              disabled={!username || checkingUsername}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg text-sm mt-2"
-            >
-              {checkingUsername ? 'Checking...' : 'Continue'}
-            </button>
-          </div>
-        )}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {step === 2 && (
-          <div>
-            <p className="text-sm text-gray-500 mb-4">
-              Add the services you offer. You can edit these later.
+          {/* step header */}
+          <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-8 py-6">
+            <p className="text-xs text-violet-200 font-bold uppercase tracking-widest mb-1">
+              Step {step} of 2
             </p>
-            <div className="space-y-3 mb-4">
-              {services.map((s, i) => (
-                <div key={i} className="flex gap-2 items-center">
+            <h2 className="text-xl font-black text-white">
+              {step === 1 ? 'Choose your booking link' : 'Set up your services'}
+            </h2>
+            <p className="text-violet-200 text-sm mt-1">
+              {step === 1
+                ? 'This is the link you share with your clients.'
+                : 'Add your services and prices. You can edit these anytime.'}
+            </p>
+          </div>
+
+          <div className="p-8">
+
+            {step === 1 && (
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Your booking URL
+                </label>
+                <div className="flex items-center bg-white border-2 border-gray-100 rounded-2xl overflow-hidden mb-3 focus-within:border-violet-400 transition-all shadow-sm">
+                  <span className="px-4 py-3 bg-gray-50 text-sm text-gray-400 font-medium border-r-2 border-gray-100 flex-shrink-0">
+                    barbr.app/
+                  </span>
                   <input
                     type="text"
-                    placeholder="Service name"
-                    value={s.name}
-                    onChange={e => updateService(i, 'name', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
+                    placeholder="your-name"
+                    value={username}
+                    onChange={e => {
+                      setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                      setUsernameError('')
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && checkUsername()}
+                    className="flex-1 px-4 py-3 text-sm outline-none font-bold text-violet-600"
                   />
-                  <input
-                    type="text"
-                    placeholder="$"
-                    value={s.price}
-                    onChange={e => updateService(i, 'price', e.target.value)}
-                    className="w-16 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-400"
-                  />
+                </div>
+
+                {usernameError && (
+                  <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-2.5 mb-4">
+                    <p className="text-xs text-red-500 font-medium">⚠️ {usernameError}</p>
+                  </div>
+                )}
+
+                {username.length >= 3 && !usernameError && (
+                  <div className="bg-green-50 border border-green-100 rounded-2xl px-4 py-2.5 mb-4">
+                    <p className="text-xs text-green-600 font-bold">✓ barbr.app/{username} is available!</p>
+                  </div>
+                )}
+
+                <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 mb-6">
+                  <p className="text-xs text-violet-600 font-medium">
+                    💡 Use your name or business name. Keep it short and easy to share.
+                  </p>
+                </div>
+
+                <button
+                  onClick={checkUsername}
+                  disabled={!username || checkingUsername}
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-2xl text-sm transition-all hover:shadow-xl hover:shadow-violet-200"
+                >
+                  {checkingUsername ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Checking...
+                    </span>
+                  ) : 'Continue →'}
+                </button>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div>
+                <div className="space-y-3 mb-4">
+                  {services.map((s, i) => (
+                    <div key={i} className="flex gap-2 items-center group">
+                      <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center text-sm flex-shrink-0">
+                        ✂️
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Service name"
+                        value={s.name}
+                        onChange={e => updateService(i, 'name', e.target.value)}
+                        className="flex-1 bg-gray-50 border-2 border-gray-100 rounded-2xl px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all"
+                      />
+                      <div className="flex items-center bg-gray-50 border-2 border-gray-100 rounded-2xl overflow-hidden focus-within:border-violet-400 transition-all">
+                        <span className="pl-3 text-sm text-gray-400 font-bold">$</span>
+                        <input
+                          type="text"
+                          placeholder="0"
+                          value={s.price}
+                          onChange={e => updateService(i, 'price', e.target.value)}
+                          className="w-16 px-2 py-2.5 text-sm outline-none bg-transparent font-bold text-gray-700"
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeService(i)}
+                        className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-500 flex items-center justify-center transition-all text-lg flex-shrink-0"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={addService}
+                  className="flex items-center gap-2 text-sm text-violet-600 font-black hover:text-violet-700 mb-6 transition-colors"
+                >
+                  <span className="w-6 h-6 bg-violet-100 hover:bg-violet-200 rounded-lg flex items-center justify-center transition-colors">+</span>
+                  Add service
+                </button>
+
+                <div className="flex gap-3">
                   <button
-                    onClick={() => removeService(i)}
-                    className="text-gray-300 hover:text-red-400 text-lg leading-none"
+                    onClick={() => setStep(1)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3.5 rounded-2xl text-sm transition-all"
                   >
-                    ×
+                    ← Back
+                  </button>
+                  <button
+                    onClick={handleFinish}
+                    disabled={loading}
+                    className="flex-2 flex-1 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-2xl text-sm transition-all hover:shadow-xl hover:shadow-violet-200"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Setting up...
+                      </span>
+                    ) : 'Finish setup 🎉'}
                   </button>
                 </div>
-              ))}
-            </div>
-            <button
-              onClick={addService}
-              className="text-sm text-purple-600 hover:underline mb-6 block"
-            >
-              + Add service
-            </button>
-            <button
-              onClick={handleFinish}
-              disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-200 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg text-sm"
-            >
-              {loading ? 'Setting up...' : 'Finish setup'}
-            </button>
+              </div>
+            )}
+
           </div>
-        )}
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          By continuing you agree to our{' '}
+          <span className="text-violet-600 font-semibold cursor-pointer">Terms</span> and{' '}
+          <span className="text-violet-600 font-semibold cursor-pointer">Privacy Policy</span>
+        </p>
 
       </div>
     </div>
