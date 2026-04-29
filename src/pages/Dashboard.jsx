@@ -23,6 +23,122 @@ const DEFAULT_AVAILABILITY = {
   Sunday:    { enabled: false, start: '9:00 AM', end: '5:00 PM' },
 }
 
+// Reschedule Modal
+function RescheduleModal({ appointment, onClose, onSave }) {
+  const today = new Date()
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    return d
+  })
+  const days = week.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }))
+  const dates = week.map(d => d.getDate().toString())
+  const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
+
+  const [selectedDay, setSelectedDay] = useState(0)
+  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    if (!selectedSlot) return
+    setSaving(true)
+    const newDay = `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`
+    await updateDoc(doc(db, 'appointments', appointment.id), {
+      day: newDay,
+      time: selectedSlot,
+    })
+    setSaving(false)
+    onSave()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+
+        <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-6 py-5 flex items-center justify-between">
+          <div>
+            <p className="text-white font-black text-lg">Reschedule</p>
+            <p className="text-violet-200 text-xs mt-0.5">{appointment.clientName} · {appointment.service}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center text-white font-black transition-all"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-6">
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-3">Pick a new day</p>
+          <div className="grid grid-cols-7 gap-1.5 mb-6">
+            {days.map((day, i) => (
+              <button
+                key={day}
+                onClick={() => { setSelectedDay(i); setSelectedSlot(null) }}
+                className={`flex flex-col items-center py-2.5 rounded-xl text-xs transition-all ${
+                  selectedDay === i
+                    ? 'bg-gradient-to-b from-violet-600 to-purple-700 text-white shadow-md shadow-violet-200'
+                    : 'bg-gray-50 text-gray-500 hover:bg-violet-50 hover:text-violet-600'
+                }`}
+              >
+                <span className="font-bold">{day}</span>
+                <span className="font-black mt-0.5">{dates[i]}</span>
+                <span style={{ fontSize: '9px' }} className="opacity-70">{months[i]}</span>
+              </button>
+            ))}
+          </div>
+
+          <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-3">Pick a new time</p>
+          <div className="grid grid-cols-4 gap-2 mb-6">
+            {ALL_SLOTS.map((slot) => (
+              <button
+                key={slot}
+                onClick={() => setSelectedSlot(slot)}
+                className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  selectedSlot === slot
+                    ? 'bg-gradient-to-b from-violet-600 to-purple-700 text-white shadow-md shadow-violet-200'
+                    : 'bg-gray-50 text-gray-600 hover:bg-violet-50 hover:text-violet-600'
+                }`}
+              >
+                {slot}
+              </button>
+            ))}
+          </div>
+
+          {selectedSlot && (
+            <div className="bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3 mb-4">
+              <p className="text-xs text-violet-600 font-bold">
+                New time: {days[selectedDay]}, {months[selectedDay]} {dates[selectedDay]} at {selectedSlot}
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-2xl text-sm transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!selectedSlot || saving}
+              className="flex-1 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-black py-3 rounded-2xl text-sm transition-all"
+            >
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : 'Confirm reschedule'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProfileTab({ barber, db, auth, setBarber }) {
   const [form, setForm] = useState({
     displayName: barber?.displayName || '',
@@ -288,6 +404,7 @@ function Dashboard() {
   const [appointments, setAppointments] = useState([])
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [rescheduling, setRescheduling] = useState(null)
 
   useEffect(() => {
     const user = auth.currentUser
@@ -324,7 +441,6 @@ function Dashboard() {
 
   const upcoming = appointments.filter(a => a.status === 'upcoming')
   const revenue = appointments.reduce((sum, a) => sum + parseFloat(a.price?.replace('$', '') || 0), 0)
-
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
@@ -342,8 +458,15 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
 
-      {/* navbar */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-50">
+      {rescheduling && (
+        <RescheduleModal
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onSave={() => setRescheduling(null)}
+        />
+      )}
+
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-40">
         <div className="text-2xl font-black tracking-tight text-gray-900">
           barb<span className="text-violet-600">r</span>
         </div>
@@ -365,15 +488,11 @@ function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-        {/* greeting */}
         <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900 mb-1">
-            {greeting}, @{barber?.username} 👋
-          </h1>
+          <h1 className="text-3xl font-black text-gray-900 mb-1">{greeting}, @{barber?.username} 👋</h1>
           <p className="text-gray-400 text-sm">Here's what's happening with your bookings today.</p>
         </div>
 
-        {/* stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { label: 'Total bookings', value: appointments.length, icon: '📅', gradient: 'from-violet-500 to-purple-600' },
@@ -392,38 +511,28 @@ function Dashboard() {
           ))}
         </div>
 
-        {/* booking link card */}
         <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-6 mb-6 flex items-center justify-between gap-4 shadow-lg shadow-violet-200">
           <div>
             <p className="text-xs text-violet-200 font-bold uppercase tracking-wider mb-1">Your booking link</p>
             <p className="text-white font-black text-lg">barbr.app/{barber?.username}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={copyLink}
-              className="text-sm bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-2xl transition-all backdrop-blur-sm"
-            >
+            <button onClick={copyLink} className="text-sm bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-2xl transition-all backdrop-blur-sm">
               {copied ? '✓ Copied!' : 'Copy link'}
             </button>
-            <button
-              onClick={() => navigate(`/${barber?.username}`)}
-              className="text-sm bg-white text-violet-700 hover:bg-violet-50 font-bold px-4 py-2.5 rounded-2xl transition-all shadow-sm"
-            >
+            <button onClick={() => navigate(`/${barber?.username}`)} className="text-sm bg-white text-violet-700 hover:bg-violet-50 font-bold px-4 py-2.5 rounded-2xl transition-all shadow-sm">
               Preview
             </button>
           </div>
         </div>
 
-        {/* tabs */}
         <div className="flex gap-1 mb-6 bg-white border border-gray-100 shadow-sm p-1.5 rounded-2xl w-fit">
           {['appointments', 'services', 'availability', 'profile'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
-                tab === t
-                  ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md'
-                  : 'text-gray-400 hover:text-gray-700'
+                tab === t ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-700'
               }`}
             >
               {t}
@@ -431,7 +540,6 @@ function Dashboard() {
           ))}
         </div>
 
-        {/* appointments */}
         {tab === 'appointments' && (
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-50">
@@ -469,6 +577,12 @@ function Dashboard() {
                     <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">
                       upcoming
                     </span>
+                    <button
+                      onClick={() => setRescheduling(a)}
+                      className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-500 font-bold px-3 py-1.5 rounded-full transition-all"
+                    >
+                      Reschedule
+                    </button>
                     <button
                       onClick={() => handleCancel(a.id)}
                       className="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-1.5 rounded-full transition-all"
