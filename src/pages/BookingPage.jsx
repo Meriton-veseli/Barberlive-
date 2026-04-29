@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { db } from '../firebase'
 import {
   collection, query, where, getDocs,
-  addDoc, onSnapshot
+  addDoc, onSnapshot, deleteDoc, doc
 } from 'firebase/firestore'
 
 const timeSlots = [
@@ -26,6 +26,9 @@ function BookingPage() {
   const [form, setForm] = useState({ name: '', phone: '' })
   const [loading, setLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [appointmentId, setAppointmentId] = useState(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelled, setCancelled] = useState(false)
 
   const today = new Date()
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -83,7 +86,7 @@ function BookingPage() {
     setLoading(true)
     try {
       const service = barber.services[selectedService]
-      await addDoc(collection(db, 'appointments'), {
+      const docRef = await addDoc(collection(db, 'appointments'), {
         username,
         clientName: form.name,
         clientPhone: form.phone,
@@ -94,11 +97,26 @@ function BookingPage() {
         status: 'upcoming',
         createdAt: new Date(),
       })
+      setAppointmentId(docRef.id)
       setStep('confirmed')
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCancel() {
+    if (!appointmentId) return
+    setCancelling(true)
+    try {
+      await deleteDoc(doc(db, 'appointments', appointmentId))
+      setCancelled(true)
+      setStep('cancelled')
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -120,6 +138,38 @@ function BookingPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'cancelled') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-3xl shadow-xl shadow-violet-100 p-8 text-center border border-violet-100">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-white text-3xl">✕</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">Booking cancelled</h2>
+            <p className="text-gray-400 text-sm mb-8">Your appointment has been cancelled and the slot is now available again.</p>
+            <button
+              onClick={() => {
+                setStep('book')
+                setSelectedService(null)
+                setSelectedSlot(null)
+                setForm({ name: '', phone: '' })
+                setAppointmentId(null)
+                setCancelled(false)
+              }}
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-black py-3.5 rounded-2xl text-sm transition-all hover:shadow-lg hover:shadow-violet-200"
+            >
+              Book a new appointment →
+            </button>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Powered by <span className="text-violet-600 font-black">barbr</span>
+          </p>
         </div>
       </div>
     )
@@ -158,10 +208,24 @@ function BookingPage() {
                 setSelectedService(null)
                 setSelectedSlot(null)
                 setForm({ name: '', phone: '' })
+                setAppointmentId(null)
               }}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-3 rounded-2xl transition-all"
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-3 rounded-2xl transition-all mb-3"
             >
               Book another appointment
+            </button>
+
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="w-full bg-red-50 hover:bg-red-100 text-red-500 text-sm font-bold py-3 rounded-2xl transition-all border border-red-100"
+            >
+              {cancelling ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                  Cancelling...
+                </span>
+              ) : 'Cancel this booking'}
             </button>
           </div>
           <p className="text-center text-xs text-gray-400 mt-4">
@@ -177,7 +241,6 @@ function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
 
-      {/* barber profile header */}
       <div className="bg-white border-b border-gray-100 px-6 py-8">
         <div className="max-w-2xl mx-auto flex items-center gap-5">
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white flex-shrink-0 shadow-lg shadow-violet-200">
@@ -209,7 +272,6 @@ function BookingPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
 
-        {/* services */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Choose a service</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -238,7 +300,6 @@ function BookingPage() {
           </div>
         </div>
 
-        {/* day + time picker */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Pick a day</p>
           <div className="grid grid-cols-7 gap-2 mb-6">
@@ -292,7 +353,6 @@ function BookingPage() {
           )}
         </div>
 
-        {/* details */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-violet-600 font-black uppercase tracking-widest mb-4">Your details</p>
           <div className="space-y-3">
@@ -313,7 +373,6 @@ function BookingPage() {
           </div>
         </div>
 
-        {/* summary */}
         {selectedServiceData && selectedSlot && (
           <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-5 text-white shadow-lg shadow-violet-200">
             <p className="text-xs font-black uppercase tracking-widest text-violet-200 mb-3">Booking summary</p>
@@ -328,7 +387,6 @@ function BookingPage() {
           </div>
         )}
 
-        {/* confirm button */}
         <button
           onClick={handleConfirm}
           disabled={selectedService === null || !selectedSlot || !form.name || !form.phone || loading}
