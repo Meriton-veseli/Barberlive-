@@ -26,9 +26,11 @@ const DEFAULT_AVAILABILITY = {
 // Parse appointment date+time into a real Date object for comparison
 function parseAppointmentDate(day, time) {
   try {
-    // day format: "Mon, Apr 29"  time format: "10:00 AM"
+    // day format: "Wed, Apr 30"  time format: "9:00 AM"
+    const parts = day.split(', ')
+    const monthDay = parts.slice(1).join(' ') // "Apr 30"
     const currentYear = new Date().getFullYear()
-    return new Date(`${day.split(', ').slice(1).join(', ')} ${currentYear} ${time}`)
+    return new Date(`${monthDay} ${currentYear} ${time}`)
   } catch {
     return new Date(0)
   }

@@ -47,17 +47,35 @@ function BookingPage() {
     const dayConfig = availability[fullDayNames[i]]
     return !dayConfig || !dayConfig.enabled
   }
+function getAvailableSlots() {
+  const now = new Date()
+  const isToday = selectedDay === 0
 
-  function getAvailableSlots() {
-    if (!availability) return timeSlots
+  let slots = timeSlots
+
+  if (availability) {
     const dayConfig = availability[fullDayNames[selectedDay]]
     if (!dayConfig || !dayConfig.enabled) return []
     const start = timeSlots.indexOf(dayConfig.start)
     const end = timeSlots.indexOf(dayConfig.end)
     if (start === -1 || end === -1) return timeSlots
-    return timeSlots.slice(start, end + 1)
+    slots = timeSlots.slice(start, end + 1)
   }
 
+  if (isToday) {
+    slots = slots.filter(slot => {
+      const [time, modifier] = slot.split(' ')
+      let [hours, minutes] = time.split(':').map(Number)
+      if (modifier === 'PM' && hours !== 12) hours += 12
+      if (modifier === 'AM' && hours === 12) hours = 0
+      const slotDate = new Date()
+      slotDate.setHours(hours, minutes, 0, 0)
+      return slotDate > now
+    })
+  }
+
+  return slots
+}
   useEffect(() => {
     async function fetchBarber() {
       const q = query(collection(db, 'barbers'), where('username', '==', username))
