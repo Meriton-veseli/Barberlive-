@@ -57,13 +57,22 @@ function Onboarding() {
     const user = auth.currentUser
     try {
       const slug = username.toLowerCase()
-      await setDoc(doc(db, 'barbers', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        username: slug,
-        services,
-        createdAt: new Date(),
-      })
+    await setDoc(doc(db, 'barbers', user.uid), {
+  uid: user.uid,
+  email: user.email,
+  username: slug,
+  services,
+  availability: {
+    Monday:    { enabled: true, start: '9:00 AM', end: '6:00 PM' },
+    Tuesday:   { enabled: true, start: '9:00 AM', end: '6:00 PM' },
+    Wednesday: { enabled: true, start: '9:00 AM', end: '6:00 PM' },
+    Thursday:  { enabled: true, start: '9:00 AM', end: '6:00 PM' },
+    Friday:    { enabled: true, start: '9:00 AM', end: '6:00 PM' },
+    Saturday:  { enabled: true, start: '9:00 AM', end: '2:00 PM' },
+    Sunday:    { enabled: false, start: '9:00 AM', end: '6:00 PM' },
+  },
+  createdAt: new Date(),
+})
       await setDoc(doc(db, 'usernames', slug), { uid: user.uid })
       navigate('/dashboard')
     } catch (err) {
