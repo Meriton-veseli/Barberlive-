@@ -68,7 +68,7 @@ function Onboarding() {
     Wednesday: { enabled: true, start: '9:00 AM', end: '6:00 PM' },
     Thursday:  { enabled: true, start: '9:00 AM', end: '6:00 PM' },
     Friday:    { enabled: true, start: '9:00 AM', end: '6:00 PM' },
-    Saturday:  { enabled: true, start: '9:00 AM', end: '2:00 PM' },
+    Saturday:  { enabled: true, start: '9:00 AM', end: '6:00 PM' },
     Sunday:    { enabled: false, start: '9:00 AM', end: '6:00 PM' },
   },
   createdAt: new Date(),
