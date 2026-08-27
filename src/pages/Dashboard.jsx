@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth, db } from '../firebase'
-import { doc, getDoc, collection, query, where, onSnapshot, deleteDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, runTransaction } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 
 const ALL_SLOTS = [
@@ -25,6 +25,28 @@ const DEFAULT_AVAILABILITY = {
   Friday:    { enabled: true,  start: '9:00 AM', end: '5:00 PM' },
   Saturday:  { enabled: true,  start: '9:00 AM', end: '2:00 PM' },
   Sunday:    { enabled: false, start: '9:00 AM', end: '5:00 PM' },
+}
+
+function slotToMinutes(slot) {
+  const [time, modifier] = slot.split(' ')
+  let [hours, minutes] = time.split(':').map(Number)
+  if (modifier === 'PM' && hours !== 12) hours += 12
+  if (modifier === 'AM' && hours === 12) hours = 0
+  return hours * 60 + minutes
+}
+
+function occupiedSlotMinutes(slot, duration) {
+  const start = slotToMinutes(slot)
+  const end = start + Number.parseInt(duration, 10)
+  const slots = []
+  for (let minute = start; minute < end; minute += 30) slots.push(minute)
+  return slots
+}
+
+function formatDateKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 // Parse appointment date+time into a real Date object for comparison
@@ -55,7 +77,7 @@ function sortAppointments(list) {
   })
 }
 
-function RescheduleModal({ appointment, onClose, onSave }) {
+function RescheduleModal({ appointment, barber, onClose, onSave }) {
   const today = new Date()
   const week = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today)
@@ -74,9 +96,39 @@ function RescheduleModal({ appointment, onClose, onSave }) {
     if (!selectedSlot) return
     setSaving(true)
     const newDay = `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`
-    await updateDoc(doc(db, 'appointments', appointment.id), { day: newDay, time: selectedSlot })
-    setSaving(false)
-    onSave()
+    const dateKey = formatDateKey(week[selectedDay])
+    const newMinutes = occupiedSlotMinutes(selectedSlot, appointment.duration || 30)
+    const newReservationRefs = newMinutes.map(minute => doc(db, 'bookingSlots', `${barber.uid}_${dateKey}_${minute}`))
+    const oldReservationRefs = (appointment.occupiedSlotMinutes || []).map(minute =>
+      doc(db, 'bookingSlots', `${barber.uid}_${appointment.dateKey}_${minute}`)
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const reservations = await Promise.all(newReservationRefs.map(ref => transaction.get(ref)))
+        if (reservations.some(reservation => reservation.exists() && reservation.data().appointmentId !== appointment.id)) {
+          throw new Error('That time was just booked. Please choose another slot.')
+        }
+        oldReservationRefs.forEach(ref => transaction.delete(ref))
+        newReservationRefs.forEach((ref, index) => transaction.set(ref, {
+          barberId: barber.uid,
+          dateKey,
+          minute: newMinutes[index],
+          appointmentId: appointment.id,
+        }))
+        transaction.update(doc(db, 'appointments', appointment.id), {
+          day: newDay,
+          time: selectedSlot,
+          dateKey,
+          occupiedSlotMinutes: newMinutes,
+        })
+      })
+      onSave()
+    } catch (err) {
+      window.alert(err.message === 'That time was just booked. Please choose another slot.' ? err.message : 'Could not reschedule the appointment.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -381,7 +433,14 @@ function Dashboard() {
 
   async function handleCancel(id) {
     if (!window.confirm('Cancel this appointment?')) return
-    await deleteDoc(doc(db, 'appointments', id))
+    const appointment = appointments.find(item => item.id === id)
+    if (!appointment) return
+    await runTransaction(db, async (transaction) => {
+      ;(appointment.occupiedSlotMinutes || []).forEach(minute => {
+        transaction.delete(doc(db, 'bookingSlots', `${barber.uid}_${appointment.dateKey}_${minute}`))
+      })
+      transaction.delete(doc(db, 'appointments', id))
+    })
   }
 
   // Split and sort appointments
@@ -442,7 +501,7 @@ function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
 
       {rescheduling && (
-        <RescheduleModal appointment={rescheduling} onClose={() => setRescheduling(null)} onSave={() => setRescheduling(null)} />
+        <RescheduleModal appointment={rescheduling} barber={barber} onClose={() => setRescheduling(null)} onSave={() => setRescheduling(null)} />
       )}
 
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-40">

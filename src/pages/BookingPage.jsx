@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { db } from '../firebase'
 import {
-  collection, query, where, getDocs,
-  addDoc, onSnapshot, deleteDoc, doc
+  collection, query, where, getDocs, onSnapshot, doc, runTransaction, serverTimestamp
 } from 'firebase/firestore'
 
 const timeSlots = [
-  '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
+  '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
   '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
   '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
-  '5:00 PM', '5:30 PM', '6:00 PM',
+  '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM',
+  '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM',
+  '11:00 PM', '11:30 PM',
 ]
 
 const SERVICE_ICONS = ['✂️', '🪒', '💈', '👦', '🧔', '💇']
@@ -25,10 +26,8 @@ function BookingPage() {
   const [step, setStep] = useState('book')
   const [form, setForm] = useState({ name: '', phone: '' })
   const [loading, setLoading] = useState(false)
+  const [bookingError, setBookingError] = useState('')
   const [notFound, setNotFound] = useState(false)
-  const [appointmentId, setAppointmentId] = useState(null)
-  const [cancelling, setCancelling] = useState(false)
-  const [cancelled, setCancelled] = useState(false)
 
   const today = new Date()
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -41,6 +40,31 @@ function BookingPage() {
   const months = week.map(d => d.toLocaleDateString('en-US', { month: 'short' }))
   const fullDayNames = week.map(d => d.toLocaleDateString('en-US', { weekday: 'long' }))
   const availability = barber?.availability || null
+  const selectedServiceData = selectedService !== null ? barber?.services?.[selectedService] : null
+  const selectedDate = week[selectedDay]
+  const dateKey = formatDateKey(selectedDate)
+
+  function slotToMinutes(slot) {
+    const [time, modifier] = slot.split(' ')
+    let [hours, minutes] = time.split(':').map(Number)
+    if (modifier === 'PM' && hours !== 12) hours += 12
+    if (modifier === 'AM' && hours === 12) hours = 0
+    return hours * 60 + minutes
+  }
+
+  function occupiedSlotMinutes(slot, duration) {
+    const start = slotToMinutes(slot)
+    const end = start + Number.parseInt(duration, 10)
+    const slots = []
+    for (let minute = start; minute < end; minute += 30) slots.push(minute)
+    return slots
+  }
+
+  function formatDateKey(date) {
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${date.getFullYear()}-${month}-${day}`
+  }
 
   function isDayOff(i) {
     if (!availability) return false
@@ -61,6 +85,13 @@ function getAvailableSlots() {
     if (start === -1 || end === -1) return timeSlots
     slots = timeSlots.slice(start, end + 1)
   }
+
+  const duration = Number.parseInt(selectedServiceData?.duration, 10) || 30
+  slots = slots.filter(slot => {
+    if (!availability) return true
+    const dayConfig = availability[fullDayNames[selectedDay]]
+    return slotToMinutes(slot) + duration <= slotToMinutes(dayConfig.end)
+  })
 
   if (isToday) {
     slots = slots.filter(slot => {
@@ -83,58 +114,71 @@ function getAvailableSlots() {
       if (snap.empty) { setNotFound(true); return }
       setBarber(snap.docs[0].data())
     }
+
     fetchBarber()
   }, [username])
 
   useEffect(() => {
     if (!barber) return
     const q = query(
-      collection(db, 'appointments'),
-      where('username', '==', username),
-      where('day', '==', `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`)
+      collection(db, 'bookingSlots'),
+      where('barberId', '==', barber.uid),
+      where('dateKey', '==', dateKey)
     )
     const unsub = onSnapshot(q, (snap) => {
-      setBookedSlots(snap.docs.map(d => d.data().time))
+      setBookedSlots(snap.docs.map(d => d.data().minute))
     })
     return () => unsub()
-  }, [barber, selectedDay, username])
+  }, [barber, dateKey])
 
   async function handleConfirm() {
     if (selectedService === null || !selectedSlot || !form.name || !form.phone) return
     setLoading(true)
+    setBookingError('')
     try {
       const service = barber.services[selectedService]
-      const docRef = await addDoc(collection(db, 'appointments'), {
-        username,
-        clientName: form.name,
-        clientPhone: form.phone,
-        service: service.name,
-        price: service.price,
-        time: selectedSlot,
-        day: `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`,
-        status: 'upcoming',
-        createdAt: new Date(),
+      const occupiedMinutes = occupiedSlotMinutes(selectedSlot, service.duration)
+      const appointmentRef = doc(collection(db, 'appointments'))
+      const reservationRefs = occupiedMinutes.map(minute =>
+        doc(db, 'bookingSlots', `${barber.uid}_${dateKey}_${minute}`)
+      )
+
+      await runTransaction(db, async (transaction) => {
+        const reservations = await Promise.all(reservationRefs.map(ref => transaction.get(ref)))
+        if (reservations.some(reservation => reservation.exists())) {
+          throw new Error('That time was just booked. Please choose another slot.')
+        }
+
+        reservationRefs.forEach((ref, index) => transaction.set(ref, {
+          barberId: barber.uid,
+          dateKey,
+          minute: occupiedMinutes[index],
+          appointmentId: appointmentRef.id,
+        }))
+        transaction.set(appointmentRef, {
+          barberId: barber.uid,
+          username,
+          clientName: form.name.trim(),
+          clientPhone: form.phone.trim(),
+          service: service.name,
+          duration: Number.parseInt(service.duration, 10),
+          price: service.price,
+          time: selectedSlot,
+          day: `${days[selectedDay]}, ${months[selectedDay]} ${dates[selectedDay]}`,
+          dateKey,
+          occupiedSlotMinutes: occupiedMinutes,
+          status: 'upcoming',
+          createdAt: serverTimestamp(),
+        })
       })
-      setAppointmentId(docRef.id)
       setStep('confirmed')
     } catch (err) {
       console.error(err)
+      setBookingError(err.message === 'That time was just booked. Please choose another slot.'
+        ? err.message
+        : 'We could not confirm your booking. Please try again.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleCancel() {
-    if (!appointmentId) return
-    setCancelling(true)
-    try {
-      await deleteDoc(doc(db, 'appointments', appointmentId))
-      setCancelled(true)
-      setStep('cancelled')
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCancelling(false)
     }
   }
 
@@ -156,38 +200,6 @@ function getAvailableSlots() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-400 text-sm">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (step === 'cancelled') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-3xl shadow-xl shadow-violet-100 p-8 text-center border border-violet-100">
-            <div className="w-20 h-20 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-white text-3xl">✕</span>
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-2">Booking cancelled</h2>
-            <p className="text-gray-400 text-sm mb-8">Your appointment has been cancelled and the slot is now available again.</p>
-            <button
-              onClick={() => {
-                setStep('book')
-                setSelectedService(null)
-                setSelectedSlot(null)
-                setForm({ name: '', phone: '' })
-                setAppointmentId(null)
-                setCancelled(false)
-              }}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-black py-3.5 rounded-2xl text-sm transition-all hover:shadow-lg hover:shadow-violet-200"
-            >
-              Book a new appointment →
-            </button>
-          </div>
-          <p className="text-center text-xs text-gray-400 mt-4">
-            Powered by <span className="text-violet-600 font-black">barbr</span>
-          </p>
         </div>
       </div>
     )
@@ -226,25 +238,13 @@ function getAvailableSlots() {
                 setSelectedService(null)
                 setSelectedSlot(null)
                 setForm({ name: '', phone: '' })
-                setAppointmentId(null)
               }}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-3 rounded-2xl transition-all mb-3"
             >
               Book another appointment
             </button>
 
-            <button
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="w-full bg-red-50 hover:bg-red-100 text-red-500 text-sm font-bold py-3 rounded-2xl transition-all border border-red-100"
-            >
-              {cancelling ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                  Cancelling...
-                </span>
-              ) : 'Cancel this booking'}
-            </button>
+            <p className="text-center text-xs text-gray-400">Need to cancel? Please contact your barber.</p>
           </div>
           <p className="text-center text-xs text-gray-400 mt-4">
             Powered by <span className="text-violet-600 font-black">barbr</span>
@@ -253,8 +253,6 @@ function getAvailableSlots() {
       </div>
     )
   }
-
-  const selectedServiceData = selectedService !== null ? barber.services[selectedService] : null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
@@ -349,7 +347,8 @@ function getAvailableSlots() {
           ) : (
             <div className="grid grid-cols-4 gap-2">
               {getAvailableSlots().map((slot) => {
-                const isBooked = bookedSlots.includes(slot)
+                const isBooked = occupiedSlotMinutes(slot, selectedServiceData?.duration || 30)
+                  .some(minute => bookedSlots.includes(minute))
                 return (
                   <button
                     key={slot}
@@ -417,6 +416,10 @@ function getAvailableSlots() {
             </span>
           ) : 'Confirm booking →'}
         </button>
+
+        {bookingError && (
+          <p className="text-center text-sm font-medium text-red-600" role="alert">{bookingError}</p>
+        )}
 
         <p className="text-center text-xs text-gray-400 pb-4">
           Powered by <span className="text-violet-600 font-black">barbr</span>

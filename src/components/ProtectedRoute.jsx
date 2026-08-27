@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { auth } from '../firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
 function ProtectedRoute({ children }) {
-  const navigate = useNavigate()
   const [checking, setChecking] = useState(true)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) navigate('/login')
+      setUser(user)
       setChecking(false)
     })
     return () => unsub()
-  }, [navigate])
+  }, [])
 
   if (checking) {
     return (
@@ -22,6 +22,8 @@ function ProtectedRoute({ children }) {
       </div>
     )
   }
+
+  if (!user) return <Navigate to="/login" replace />
 
   return children
 }

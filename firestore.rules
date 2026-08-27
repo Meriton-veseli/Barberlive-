@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsBarber(barberId) {
+      return signedIn() && request.auth.uid == barberId;
+    }
+
+    function ownsUsername(username) {
+      return signedIn()
+        && get(/databases/$(database)/documents/barbers/$(request.auth.uid)).data.username == username;
+    }
+
+    function ownsAppointment(data) {
+      return (data.keys().hasAll(['barberId']) && ownsBarber(data.barberId))
+        || (data.keys().hasAll(['username']) && ownsUsername(data.username));
+    }
+
+    match /barbers/{barberId} {
+      // Booking pages need a barber's public profile and services.
+      allow read: if true;
+      allow create: if ownsBarber(barberId)
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if ownsBarber(barberId);
+    }
+
+    match /usernames/{username} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /bookingSlots/{slotId} {
+      // These documents deliberately contain availability metadata only—never client data.
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly([
+        'barberId', 'dateKey', 'minute', 'appointmentId'
+      ])
+        && request.resource.data.barberId is string
+        && request.resource.data.dateKey is string
+        && request.resource.data.minute is int
+        && request.resource.data.minute >= 0
+        && request.resource.data.minute < 1440
+        && request.resource.data.appointmentId is string
+        // A reservation is valid only when its appointment is created in the same transaction.
+        && existsAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId))
+        && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.barberId == request.resource.data.barberId
+        && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.dateKey == request.resource.data.dateKey;
+      allow update: if false;
+      allow delete: if ownsBarber(resource.data.barberId);
+    }
+
+    match /appointments/{appointmentId} {
+      // Clients can submit a new appointment, but cannot read or alter client records.
+      allow create: if request.resource.data.keys().hasOnly([
+        'barberId', 'username', 'clientName', 'clientPhone', 'service', 'duration',
+        'price', 'time', 'day', 'dateKey', 'occupiedSlotMinutes', 'status', 'createdAt'
+      ])
+        && request.resource.data.keys().hasAll([
+          'barberId', 'username', 'clientName', 'clientPhone', 'service', 'duration',
+          'price', 'time', 'day', 'dateKey', 'occupiedSlotMinutes', 'status', 'createdAt'
+        ])
+        && request.resource.data.barberId is string
+        && request.resource.data.username is string
+        && request.resource.data.clientName is string
+        && request.resource.data.clientName.size() > 0
+        && request.resource.data.clientName.size() <= 100
+        && request.resource.data.clientPhone is string
+        && request.resource.data.clientPhone.size() > 0
+        && request.resource.data.clientPhone.size() <= 40
+        && request.resource.data.service is string
+        && request.resource.data.duration is int
+        && request.resource.data.duration > 0
+        && request.resource.data.duration <= 480
+        && request.resource.data.price is string
+        && request.resource.data.time is string
+        && request.resource.data.day is string
+        && request.resource.data.dateKey is string
+        && request.resource.data.occupiedSlotMinutes is list
+        && request.resource.data.occupiedSlotMinutes.size() > 0
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.status == 'upcoming';
+      allow read, update, delete: if ownsAppointment(resource.data);
+    }
+  }
+}
