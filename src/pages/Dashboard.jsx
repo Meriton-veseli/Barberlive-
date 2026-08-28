@@ -464,24 +464,25 @@ function Dashboard() {
     )
   }
 
-  const AppointmentRow = ({ a, i, total, isCompleted }) => (
+   const AppointmentRow = ({ a, i, total, isCompleted }) => (
     <div
       className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors ${i !== total - 1 ? 'border-b border-gray-50' : ''}`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0">
         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black text-white flex-shrink-0 ${isCompleted ? 'bg-gradient-to-br from-gray-400 to-gray-500' : 'bg-gradient-to-br from-violet-500 to-purple-600'}`}>
           {a.clientName?.split(' ').map(n => n[0]).join('')}
         </div>
-        <div>
-          <p className={`text-sm font-bold ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>{a.clientName}</p>
-          <p className="text-xs text-gray-400">{a.service}</p>
+        <div className="min-w-0">
+          <p className={`text-sm font-bold truncate ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>{a.clientName}</p>
+          <p className="text-xs text-gray-400 truncate">{a.service}</p>
+          <p className="text-xs text-gray-400 font-semibold sm:hidden">{a.day} · {a.time}</p>
         </div>
       </div>
-      <div className="text-right hidden sm:block">
+      <div className="text-right hidden sm:block flex-shrink-0">
         <p className={`text-sm font-bold ${isCompleted ? 'text-gray-400' : 'text-gray-700'}`}>{a.time}</p>
         <p className="text-xs text-gray-400">{a.day}</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {isCompleted ? (
           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-600">
             ✓ done
