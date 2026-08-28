@@ -464,7 +464,7 @@ function Dashboard() {
     )
   }
 
-   const AppointmentRow = ({ a, i, total, isCompleted }) => (
+     const AppointmentRow = ({ a, i, total, isCompleted }) => (
     <div
       className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors ${i !== total - 1 ? 'border-b border-gray-50' : ''}`}
     >
@@ -484,12 +484,12 @@ function Dashboard() {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {isCompleted ? (
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-600">
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-600 hidden sm:inline-flex">
             ✓ done
           </span>
         ) : (
           <>
-            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">upcoming</span>
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700 hidden sm:inline-flex">upcoming</span>
             <button onClick={() => setRescheduling(a)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-500 font-bold px-3 py-1.5 rounded-full transition-all">Reschedule</button>
             <button onClick={() => handleCancel(a.id)} className="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-1.5 rounded-full transition-all">Cancel</button>
           </>
