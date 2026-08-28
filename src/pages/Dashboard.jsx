@@ -541,10 +541,10 @@ function Dashboard() {
           ))}
         </div>
 
-        <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-6 mb-6 flex items-center justify-between gap-4 shadow-lg shadow-violet-200">
-          <div>
+               <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-violet-200">
+          <div className="min-w-0">
             <p className="text-xs text-violet-200 font-bold uppercase tracking-wider mb-1">Your booking link</p>
-            <p className="text-white font-black text-lg">barbr.app/{barber?.username}</p>
+            <p className="text-white font-black text-lg truncate">barbr.app/{barber?.username}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={copyLink} className="text-sm bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-2xl transition-all backdrop-blur-sm">{copied ? '✓ Copied!' : 'Copy link'}</button>
