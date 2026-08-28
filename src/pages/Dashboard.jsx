@@ -551,7 +551,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="flex gap-1 mb-6 bg-white border border-gray-100 shadow-sm p-1.5 rounded-2xl w-fit">
+        <div className="flex gap-1 mb-6 bg-white border border-gray-100 shadow-sm p-1.5 rounded-2xl w-full overflow-x-auto">
           {['appointments', 'services', 'availability', 'profile'].map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${tab === t ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-700'}`}>
