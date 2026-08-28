@@ -88,14 +88,16 @@ function Onboarding() {
     const user = auth.currentUser
     try {
       const slug = username.toLowerCase()
-      await setDoc(doc(db, 'barbers', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        username: slug,
-        services,
-        availability,
-        createdAt: new Date(),
-      })
+     await setDoc(doc(db, 'barbers', user.uid), {
+       uid: user.uid,
+       username: slug,
+       services,
+       availability,
+       createdAt: new Date(),
+    })
+    await setDoc(doc(db, 'barberPrivate', user.uid), {
+       email: user.email,
+    })
       await setDoc(doc(db, 'usernames', slug), { uid: user.uid })
       navigate('/dashboard')
     } catch (err) {
