@@ -818,10 +818,16 @@ function Dashboard() {
   const upcomingList = sorted.filter(a => !isPast(a))
   const completedList = sorted.filter(a => isPast(a)).reverse() // most recent completed first
 
-  const revenue = completedList.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
+   const revenue = completedList.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
+  const todayKey = formatDateKey(new Date())
+  const todaysAppointments = sorted.filter(a => a.dateKey === todayKey)
+  const todaysRevenue = todaysAppointments.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
+  const nextToday = todaysAppointments.filter(a => !isPast(a))[0]
+  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   if (loading) {
     return (
@@ -890,25 +896,27 @@ function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900 mb-1">{greeting}, @{barber?.username} 👋</h1>
-          <p className="text-gray-400 text-sm">Here's what's happening with your bookings today.</p>
+               <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">{greeting}, @{barber?.username} 👋</h1>
+          <p className="text-gray-400 text-sm">{todayLabel} · Today's overview</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {[
-            { label: 'Total bookings', value: appointments.length, icon: '📅' },
-            { label: 'Upcoming', value: upcomingList.length, icon: '⏰' },
-            { label: 'Est. revenue', value: `$${revenue}`, icon: '💰', dark: true },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-3xl p-6 flex items-center gap-4 ${stat.dark ? 'bg-[#0F3D40]' : 'bg-white border border-gray-100 shadow-sm'}`}>
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${stat.dark ? 'bg-white/15' : 'bg-[#EAF3F2]'}`}>{stat.icon}</div>
-              <div>
-                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${stat.dark ? 'text-[#9DC7C8]' : 'text-gray-400'}`}>{stat.label}</p>
-                <p className={`text-3xl font-black ${stat.dark ? 'text-white' : 'text-gray-900'}`}>{stat.value}</p>
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="w-9 h-9 rounded-xl bg-[#EAF3F2] flex items-center justify-center text-base mb-2.5">📅</div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Today's bookings</p>
+            <p className="text-2xl font-black text-[#0F3D40]">{todaysAppointments.length}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="w-9 h-9 rounded-xl bg-[#EAF3F2] flex items-center justify-center text-base mb-2.5">⏰</div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Next appointment</p>
+            <p className="text-2xl font-black text-[#0F3D40]">{nextToday ? nextToday.time : '—'}</p>
+          </div>
+          <div className="bg-[#0F3D40] rounded-2xl p-4">
+            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-base mb-2.5">💰</div>
+            <p className="text-[10px] text-[#9DC7C8] font-bold uppercase tracking-wider mb-1">Today's revenue</p>
+            <p className="text-2xl font-black text-white">${todaysRevenue.toFixed(0)}</p>
+          </div>
         </div>
 
         <div className="bg-[#0F3D40] rounded-3xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
