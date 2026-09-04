@@ -905,7 +905,7 @@ function Dashboard() {
         </div>
         <div className="min-w-0">
           <p className={`text-sm font-bold truncate ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>{a.clientName}</p>
-          <p className="text-xs text-gray-400 truncate">{a.service}</p>
+          <p className="text-xs text-gray-400 truncate">{a.service}</p> 
           <p className="text-xs text-gray-400 font-semibold sm:hidden">{a.day} · {a.time}</p>
         </div>
       </div>
@@ -913,19 +913,43 @@ function Dashboard() {
         <p className={`text-sm font-bold ${isCompleted ? 'text-gray-400' : 'text-gray-700'}`}>{a.time}</p>
         <p className="text-xs text-gray-400">{a.day}</p>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {isCompleted ? (
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-600 hidden sm:inline-flex">
-            ✓ done
-          </span>
-        ) : (
-          <>
-            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#EAF3F2] text-[#0F3D40] hidden sm:inline-flex">upcoming</span>
-            <button onClick={() => setRescheduling(a)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-500 font-bold px-3 py-1.5 rounded-full transition-all">Reschedule</button>
-            <button onClick={() => handleCancel(a.id)} className="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-1.5 rounded-full transition-all">Cancel</button>
-          </>
-        )}
-      </div>
+     <div className="flex items-center gap-2 flex-shrink-0">
+  {a.clientPhone && (
+    <a
+      href={'tel:' + a.clientPhone}
+      onClick={e => e.stopPropagation()}
+      className="text-xs bg-[#EAF3F2] hover:bg-[#DDEEED] text-[#0F3D40] font-bold px-3 py-1.5 rounded-full transition-all inline-flex items-center gap-1"
+    >
+      📞 <span className="hidden sm:inline">Call</span>
+    </a>
+  )}
+
+  {isCompleted ? (
+    <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-600 hidden sm:inline-flex">
+      ✓ done
+    </span>
+  ) : (
+    <>
+      <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#EAF3F2] text-[#0F3D40] hidden sm:inline-flex">
+        upcoming
+      </span>
+
+      <button
+        onClick={() => setRescheduling(a)}
+        className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-500 font-bold px-3 py-1.5 rounded-full transition-all"
+      >
+        Reschedule
+      </button>
+
+      <button
+        onClick={() => handleCancel(a.id)}
+        className="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-1.5 rounded-full transition-all"
+      >
+        Cancel
+      </button>
+    </>
+  )}
+</div>
     </div>
   )
 
