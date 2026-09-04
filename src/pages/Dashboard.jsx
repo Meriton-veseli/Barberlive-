@@ -772,6 +772,10 @@ function Dashboard() {
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
   const [rescheduling, setRescheduling] = useState(null)
+  const [upcomingFilter, setUpcomingFilter] = useState('today')
+  const [completedExpanded, setCompletedExpanded] = useState(false)
+  const [completedShown, setCompletedShown] = useState(10)
+
 
   useEffect(() => {
     const user = auth.currentUser
@@ -828,6 +832,16 @@ function Dashboard() {
   const todaysRevenue = todaysAppointments.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
   const nextToday = todaysAppointments.filter(a => !isPast(a))[0]
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  const tomorrowKey = formatDateKey(new Date(Date.now() + 24 * 60 * 60 * 1000))
+  const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+  const upcomingFiltered = upcomingList.filter(a => {
+    if (upcomingFilter === 'today') return a.dateKey === todayKey
+    if (upcomingFilter === 'tomorrow') return a.dateKey === tomorrowKey
+    if (upcomingFilter === 'week') return getAppointmentDate(a) <= weekEnd
+    return true // 'all'
+  })
 
   if (loading) {
     return (
@@ -939,44 +953,80 @@ function Dashboard() {
           ))}
         </div>
 
-        {tab === 'appointments' && (
+                {tab === 'appointments' && (
           <div className="space-y-4">
 
-            {/* Upcoming */}
+                      {/* Upcoming */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+             <div className="p-4 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-2">
                 <div>
                   <p className="text-base font-black text-gray-900">Upcoming</p>
-                  <p className="text-xs text-gray-400 mt-1">{upcomingList.length} appointment{upcomingList.length !== 1 ? 's' : ''} scheduled</p>
+                  <p className="text-xs text-gray-400 mt-1">{upcomingFiltered.length} appointment{upcomingFiltered.length !== 1 ? 's' : ''}</p>
                 </div>
-                <span className="text-xs font-bold bg-[#EAF3F2] text-[#0F3D40] px-3 py-1.5 rounded-full">{upcomingList.length}</span>
+                                <div className="flex gap-1.5 overflow-x-auto flex-shrink min-w-0">
+                  {[
+                    { key: 'today', label: 'Today' },
+                    { key: 'tomorrow', label: 'Tomorrow' },
+                    { key: 'week', label: 'Week' },
+                    { key: 'all', label: 'All' },
+                  ].map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => setUpcomingFilter(f.key)}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex-shrink-0 ${
+                        upcomingFilter === f.key ? 'bg-[#0F3D40] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {upcomingList.length === 0 ? (
+              {upcomingFiltered.length === 0 ? (
                 <div className="px-6 py-12 text-center">
                   <p className="text-3xl mb-3">📭</p>
-                  <p className="text-sm font-bold text-gray-400">No upcoming appointments</p>
-                  <p className="text-xs text-gray-300 mt-1">Share your booking link to get started!</p>
+                  <p className="text-sm font-bold text-gray-400">Nothing here</p>
+                  <p className="text-xs text-gray-300 mt-1">Try a different filter, or share your booking link.</p>
                 </div>
               ) : (
-                upcomingList.map((a, i) => (
-                  <AppointmentRow key={a.id} a={a} i={i} total={upcomingList.length} isCompleted={false} />
+                upcomingFiltered.map((a, i) => (
+                  <AppointmentRow key={a.id} a={a} i={i} total={upcomingFiltered.length} isCompleted={false} />
                 ))
               )}
             </div>
 
-            {/* Completed */}
+            {/* Completed — collapsed by default, paginated */}
             {completedList.length > 0 && (
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-                  <div>
+                <button
+                  onClick={() => setCompletedExpanded(!completedExpanded)}
+                  className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-gray-400 text-xs transition-transform ${completedExpanded ? 'rotate-90' : ''}`}>▸</span>
                     <p className="text-base font-black text-gray-900">Completed</p>
-                    <p className="text-xs text-gray-400 mt-1">{completedList.length} appointment{completedList.length !== 1 ? 's' : ''} done</p>
                   </div>
-                  <span className="text-xs font-bold bg-green-100 text-green-600 px-3 py-1.5 rounded-full">{completedList.length}</span>
-                </div>
-                {completedList.map((a, i) => (
-                  <AppointmentRow key={a.id} a={a} i={i} total={completedList.length} isCompleted={true} />
-                ))}
+                  <span className="text-xs font-bold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full">
+                    {completedList.length} total{!completedExpanded ? ' · collapsed' : ''}
+                  </span>
+                </button>
+                {completedExpanded && (
+                  <>
+                    <div className="border-t border-gray-50">
+                      {completedList.slice(0, completedShown).map((a, i) => (
+                        <AppointmentRow key={a.id} a={a} i={i} total={Math.min(completedShown, completedList.length)} isCompleted={true} />
+                      ))}
+                    </div>
+                    {completedShown < completedList.length && (
+                      <button
+                        onClick={() => setCompletedShown(completedShown + 10)}
+                        className="w-full py-3 text-xs font-bold text-[#0F3D40] hover:bg-gray-50 border-t border-gray-50 transition-all"
+                      >
+                        Load more ({completedList.length - completedShown} remaining)
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
