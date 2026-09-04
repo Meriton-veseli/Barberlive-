@@ -49,12 +49,10 @@ function formatDateKey(date) {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-// Parse appointment date+time into a real Date object for comparison
 function parseAppointmentDate(day, time) {
   try {
-    // day format: "Wed, Apr 30"  time format: "9:00 AM"
     const parts = day.split(', ')
-    const monthDay = parts.slice(1).join(' ') // "Apr 30"
+    const monthDay = parts.slice(1).join(' ')
     const currentYear = new Date().getFullYear()
     return new Date(`${monthDay} ${currentYear} ${time}`)
   } catch {
@@ -62,19 +60,62 @@ function parseAppointmentDate(day, time) {
   }
 }
 
-// Returns true if appointment time has already passed
 function isPast(appointment) {
   const apptDate = parseAppointmentDate(appointment.day, appointment.time)
   return apptDate < new Date()
 }
 
-// Sort appointments by date+time ascending
 function sortAppointments(list) {
   return [...list].sort((a, b) => {
     const da = parseAppointmentDate(a.day, a.time)
     const db_ = parseAppointmentDate(b.day, b.time)
     return da - db_
   })
+}
+
+function getAppointmentDate(a) {
+  if (a.dateKey) {
+    const [y, m, d] = a.dateKey.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return parseAppointmentDate(a.day, a.time)
+}
+
+function startOfWeek(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = (day === 0 ? -6 : 1) - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function getPeriodBounds(range, offset) {
+  const now = new Date()
+  if (range === 'week') {
+    const start = startOfWeek(now)
+    start.setDate(start.getDate() + offset * 7)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 7)
+    return { start, end }
+  }
+  if (range === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1)
+    return { start, end }
+  }
+  const start = new Date(now.getFullYear() + offset, 0, 1)
+  const end = new Date(now.getFullYear() + offset + 1, 0, 1)
+  return { start, end }
+}
+
+function inRange(date, start, end) {
+  return date >= start && date < end
+}
+
+function pctChange(current, previous) {
+  if (previous === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - previous) / previous) * 100)
 }
 
 function RescheduleModal({ appointment, barber, onClose, onSave }) {
@@ -394,181 +435,6 @@ function ServicesTab({ barber, db, auth, setBarber }) {
   )
 }
 
-function ClientsTab({ appointments, barber, db }) {
-  const [notes, setNotes] = useState({})
-  const [editingPhone, setEditingPhone] = useState(null)
-  const [noteDraft, setNoteDraft] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const clients = useMemo(() => {
-    const map = {}
-    appointments.forEach(a => {
-      const phone = a.clientPhone
-      if (!phone) return
-      if (!map[phone]) {
-        map[phone] = { phone, name: a.clientName, visits: 0, totalSpent: 0, lastVisit: null }
-      }
-      map[phone].visits += 1
-      map[phone].totalSpent += Number.parseFloat(a.price || 0)
-      const apptDate = parseAppointmentDate(a.day, a.time)
-      if (!map[phone].lastVisit || apptDate > map[phone].lastVisit) {
-        map[phone].lastVisit = apptDate
-        map[phone].name = a.clientName
-      }
-    })
-    return Object.values(map).sort((a, b) => b.lastVisit - a.lastVisit)
-  }, [appointments])
-
-  useEffect(() => {
-    if (!barber || clients.length === 0) return
-    async function loadNotes() {
-      const loaded = {}
-      await Promise.all(clients.map(async (c) => {
-        const key = `${barber.uid}_${c.phone.replace(/\D/g, '')}`
-        const snap = await getDoc(doc(db, 'clientNotes', key))
-        if (snap.exists()) loaded[c.phone] = snap.data().note
-      }))
-      setNotes(loaded)
-    }
-    loadNotes()
-  }, [barber, clients.length])
-
-  async function saveNote(phone) {
-    setSaving(true)
-    const key = `${barber.uid}_${phone.replace(/\D/g, '')}`
-    await setDoc(doc(db, 'clientNotes', key), {
-      barberId: barber.uid,
-      phone,
-      note: noteDraft,
-      updatedAt: new Date(),
-    })
-    setNotes(prev => ({ ...prev, [phone]: noteDraft }))
-    setEditingPhone(null)
-    setSaving(false)
-  }
-
-  if (clients.length === 0) {
-    return (
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
-        <p className="text-3xl mb-3">👥</p>
-        <p className="text-sm font-bold text-gray-400">No clients yet</p>
-        <p className="text-xs text-gray-300 mt-1">Clients will show up here after their first booking.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-      {clients.map((c, i) => (
-        <div key={c.phone} className={`p-5 ${i !== clients.length - 1 ? 'border-b border-gray-50' : ''}`}>
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-[#0F3D40] flex items-center justify-center text-xs font-black text-white flex-shrink-0">
-                {c.name?.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 truncate">{c.name}</p>
-                <p className="text-xs text-gray-400">{c.phone}</p>
-              </div>
-            </div>
-            {c.visits >= 3 && (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#EAF3F2] text-[#0F3D40] flex-shrink-0">Regular</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3 ml-12 flex-wrap">
-            <span>{c.visits} visit{c.visits !== 1 ? 's' : ''}</span>
-            <span>·</span>
-            <span>${c.totalSpent.toFixed(0)} spent</span>
-            <span>·</span>
-            <span>Last: {c.lastVisit?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-          </div>
-
-          <div className="ml-12">
-            {editingPhone === c.phone ? (
-              <div className="flex items-start gap-2">
-                <textarea
-                  value={noteDraft}
-                  onChange={e => setNoteDraft(e.target.value)}
-                  placeholder="e.g. prefers a fade, always 5 min late..."
-                  className="flex-1 text-xs bg-gray-50 border border-gray-100 rounded-xl p-3 outline-none focus:border-[#0F3D40]"
-                  rows={2}
-                />
-                <button
-                  onClick={() => saveNote(c.phone)}
-                  disabled={saving}
-                  className="text-xs bg-[#0F3D40] hover:bg-[#0C3134] text-white font-bold px-3 py-2 rounded-xl flex-shrink-0 disabled:opacity-50"
-                >
-                  {saving ? '...' : 'Save'}
-                </button>
-              </div>
-            ) : notes[c.phone] ? (
-              <button
-                onClick={() => { setEditingPhone(c.phone); setNoteDraft(notes[c.phone]) }}
-                className="text-left text-xs text-gray-600 bg-gray-50 rounded-xl p-3 w-full hover:bg-gray-100 transition-all"
-              >
-                📝 {notes[c.phone]}
-              </button>
-            ) : (
-              <button
-                onClick={() => { setEditingPhone(c.phone); setNoteDraft('') }}
-                className="text-xs text-[#0F3D40] font-semibold hover:text-[#0C3134]"
-              >
-                + Add a note
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function getAppointmentDate(a) {
-  if (a.dateKey) {
-    const [y, m, d] = a.dateKey.split('-').map(Number)
-    return new Date(y, m - 1, d)
-  }
-  return parseAppointmentDate(a.day, a.time)
-}
-
-function startOfWeek(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1) - day // Monday as start of week
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function getPeriodBounds(range, offset) {
-  const now = new Date()
-  if (range === 'week') {
-    const start = startOfWeek(now)
-    start.setDate(start.getDate() + offset * 7)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 7)
-    return { start, end }
-  }
-  if (range === 'month') {
-    const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-    const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1)
-    return { start, end }
-  }
-  const start = new Date(now.getFullYear() + offset, 0, 1)
-  const end = new Date(now.getFullYear() + offset + 1, 0, 1)
-  return { start, end }
-}
-
-function inRange(date, start, end) {
-  return date >= start && date < end
-}
-
-function pctChange(current, previous) {
-  if (previous === 0) return current > 0 ? 100 : 0
-  return Math.round(((current - previous) / previous) * 100)
-}
-
 function AnalyticsTab({ appointments }) {
   const [range, setRange] = useState('month')
 
@@ -583,7 +449,6 @@ function AnalyticsTab({ appointments }) {
     const currentRevenue = currentList.reduce((sum, a) => sum + Number.parseFloat(a.price || 0), 0)
     const previousRevenue = previousList.reduce((sum, a) => sum + Number.parseFloat(a.price || 0), 0)
 
-    // First-ever appointment per phone number, to detect new clients in this period
     const firstVisit = {}
     withDates.forEach(a => {
       if (!a.clientPhone) return
@@ -594,7 +459,6 @@ function AnalyticsTab({ appointments }) {
     const newClientsCurrent = Object.values(firstVisit).filter(d => inRange(d, current.start, current.end)).length
     const newClientsPrevious = Object.values(firstVisit).filter(d => inRange(d, previous.start, previous.end)).length
 
-    // Bucket the current period into bars, and align the previous period's bars alongside
     let buckets = []
     if (range === 'week') {
       const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -764,6 +628,180 @@ function AnalyticsTab({ appointments }) {
   )
 }
 
+function ClientsTab({ appointments, barber, db }) {
+  const [notes, setNotes] = useState({})
+  const [editingPhone, setEditingPhone] = useState(null)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const clients = useMemo(() => {
+    const map = {}
+    appointments.forEach(a => {
+      const phone = a.clientPhone
+      if (!phone) return
+      if (!map[phone]) {
+        map[phone] = { phone, name: a.clientName, visits: 0, totalSpent: 0, lastVisit: null }
+      }
+      map[phone].visits += 1
+      map[phone].totalSpent += Number.parseFloat(a.price || 0)
+      const apptDate = parseAppointmentDate(a.day, a.time)
+      if (!map[phone].lastVisit || apptDate > map[phone].lastVisit) {
+        map[phone].lastVisit = apptDate
+        map[phone].name = a.clientName
+      }
+    })
+    return Object.values(map).sort((a, b) => b.lastVisit - a.lastVisit)
+  }, [appointments])
+
+  const filteredClients = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return clients
+    return clients.filter(c => c.name?.toLowerCase().includes(q) || c.phone.includes(q))
+  }, [clients, search])
+
+  useEffect(() => {
+    if (!barber || clients.length === 0) return
+    async function loadNotes() {
+      const loaded = {}
+      await Promise.all(clients.map(async (c) => {
+        const key = `${barber.uid}_${c.phone.replace(/\D/g, '')}`
+        try {
+          const snap = await getDoc(doc(db, 'clientNotes', key))
+          if (snap.exists()) loaded[c.phone] = snap.data().note
+        } catch {
+          // No note saved yet for this client — expected, not an error worth surfacing.
+        }
+      }))
+      setNotes(loaded)
+    }
+    loadNotes()
+  }, [barber, clients.length])
+
+  async function saveNote(phone) {
+    setSaving(true)
+    const key = `${barber.uid}_${phone.replace(/\D/g, '')}`
+    try {
+      await setDoc(doc(db, 'clientNotes', key), {
+        barberId: barber.uid,
+        phone,
+        note: noteDraft,
+        updatedAt: new Date(),
+      })
+      setNotes(prev => ({ ...prev, [phone]: noteDraft }))
+      setEditingPhone(null)
+    } catch (err) {
+      console.error('Failed to save note:', err)
+      window.alert('Could not save the note. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (clients.length === 0) {
+    return (
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
+        <p className="text-3xl mb-3">👥</p>
+        <p className="text-sm font-bold text-gray-400">No clients yet</p>
+        <p className="text-xs text-gray-300 mt-1">Clients will show up here after their first booking.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search clients by name or phone..."
+        className="w-full bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-[#0F3D40] transition-all mb-4"
+      />
+
+      {filteredClients.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
+          <p className="text-sm font-bold text-gray-400">No clients match "{search}"</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredClients.map((c) => (
+            <div key={c.phone} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+
+              {/* Identity row */}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#0F3D40] flex items-center justify-center text-xs font-black text-white flex-shrink-0">
+                    {c.name?.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">{c.name}</p>
+                    <p className="text-xs text-gray-400">{c.phone}</p>
+                  </div>
+                </div>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full flex-shrink-0 ${c.visits >= 3 ? 'bg-[#EAF3F2] text-[#0F3D40]' : 'bg-gray-50 text-gray-400'}`}>
+                  {c.visits >= 3 ? 'Regular' : 'New'}
+                </span>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="bg-gray-50 rounded-xl p-2 text-center">
+                  <p className="text-sm font-black text-[#0F3D40]">{c.visits}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">visit{c.visits !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-2 text-center">
+                  <p className="text-sm font-black text-[#0F3D40]">${c.totalSpent.toFixed(0)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">spent</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-2 text-center">
+                  <p className="text-sm font-black text-[#0F3D40]">{c.lastVisit?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">last visit</p>
+                </div>
+              </div>
+
+              {/* Note zone — visually distinct */}
+              {editingPhone === c.phone ? (
+                <div className="flex items-start gap-2">
+                  <textarea
+                    value={noteDraft}
+                    onChange={e => setNoteDraft(e.target.value)}
+                    placeholder="e.g. prefers a fade, always 5 min late..."
+                    className="flex-1 text-xs bg-gray-50 border border-gray-100 rounded-xl p-3 outline-none focus:border-[#0F3D40]"
+                    rows={2}
+                  />
+                  <button
+                    onClick={() => saveNote(c.phone)}
+                    disabled={saving}
+                    className="text-xs bg-[#0F3D40] hover:bg-[#0C3134] text-white font-bold px-3 py-2 rounded-xl flex-shrink-0 disabled:opacity-50"
+                  >
+                    {saving ? '...' : 'Save'}
+                  </button>
+                </div>
+              ) : notes[c.phone] ? (
+                <button
+                  onClick={() => { setEditingPhone(c.phone); setNoteDraft(notes[c.phone]) }}
+                  className="text-left w-full bg-amber-50 border-l-2 border-amber-300 rounded-r-lg px-3 py-2 hover:bg-amber-100 transition-all"
+                >
+                  <p className="text-xs text-amber-800">📝 {notes[c.phone]}</p>
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setEditingPhone(c.phone); setNoteDraft('') }}
+                  className="w-full text-left text-xs text-[#0F3D40] font-semibold border border-dashed border-[#D3E5E4] rounded-lg px-3 py-2 hover:bg-[#F3F7F6] transition-all"
+                >
+                  + Add a note
+                </button>
+              )}
+
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 function Dashboard() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('appointments')
@@ -775,7 +813,7 @@ function Dashboard() {
   const [upcomingFilter, setUpcomingFilter] = useState('today')
   const [completedExpanded, setCompletedExpanded] = useState(false)
   const [completedShown, setCompletedShown] = useState(10)
-
+  const [appointmentSearch, setAppointmentSearch] = useState('')
 
   useEffect(() => {
     const user = auth.currentUser
@@ -817,12 +855,11 @@ function Dashboard() {
     })
   }
 
-  // Split and sort appointments
   const sorted = sortAppointments(appointments)
   const upcomingList = sorted.filter(a => !isPast(a))
-  const completedList = sorted.filter(a => isPast(a)).reverse() // most recent completed first
+  const completedList = sorted.filter(a => isPast(a)).reverse()
 
-   const revenue = completedList.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
+  const revenue = completedList.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -837,10 +874,14 @@ function Dashboard() {
   const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
   const upcomingFiltered = upcomingList.filter(a => {
-    if (upcomingFilter === 'today') return a.dateKey === todayKey
-    if (upcomingFilter === 'tomorrow') return a.dateKey === tomorrowKey
-    if (upcomingFilter === 'week') return getAppointmentDate(a) <= weekEnd
-    return true // 'all'
+    if (upcomingFilter === 'today' && a.dateKey !== todayKey) return false
+    if (upcomingFilter === 'tomorrow' && a.dateKey !== tomorrowKey) return false
+    if (upcomingFilter === 'week' && getAppointmentDate(a) > weekEnd) return false
+    if (appointmentSearch.trim()) {
+      const q = appointmentSearch.trim().toLowerCase()
+      return a.clientName?.toLowerCase().includes(q) || a.service?.toLowerCase().includes(q)
+    }
+    return true
   })
 
   if (loading) {
@@ -854,7 +895,7 @@ function Dashboard() {
     )
   }
 
-     const AppointmentRow = ({ a, i, total, isCompleted }) => (
+  const AppointmentRow = ({ a, i, total, isCompleted }) => (
     <div
       className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors ${i !== total - 1 ? 'border-b border-gray-50' : ''}`}
     >
@@ -910,7 +951,7 @@ function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-               <div className="mb-6">
+        <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">{greeting}, @{barber?.username} 👋</h1>
           <p className="text-gray-400 text-sm">{todayLabel} · Today's overview</p>
         </div>
@@ -947,23 +988,30 @@ function Dashboard() {
         <div className="flex gap-1 mb-6 bg-white border border-gray-100 shadow-sm p-1.5 rounded-2xl w-full overflow-x-auto">
           {['appointments', 'analytics', 'clients', 'services', 'availability', 'profile'].map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${tab === t ? 'bg-[#0F3D40] text-white shadow-md' : 'text-gray-400 hover:text-gray-700'}`}>
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all flex-shrink-0 ${tab === t ? 'bg-[#0F3D40] text-white shadow-md' : 'text-gray-400 hover:text-gray-700'}`}>
               {t}
             </button>
           ))}
         </div>
 
-                {tab === 'appointments' && (
+        {tab === 'appointments' && (
           <div className="space-y-4">
 
-                      {/* Upcoming */}
+            <input
+              type="text"
+              value={appointmentSearch}
+              onChange={e => setAppointmentSearch(e.target.value)}
+              placeholder="Search by client name or service..."
+              className="w-full bg-white border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-[#0F3D40] transition-all"
+            />
+
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-             <div className="p-4 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-2">
+              <div className="p-4 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-2">
                 <div>
                   <p className="text-base font-black text-gray-900">Upcoming</p>
                   <p className="text-xs text-gray-400 mt-1">{upcomingFiltered.length} appointment{upcomingFiltered.length !== 1 ? 's' : ''}</p>
                 </div>
-                                <div className="flex gap-1.5 overflow-x-auto flex-shrink min-w-0">
+                <div className="flex gap-1.5 overflow-x-auto flex-shrink min-w-0">
                   {[
                     { key: 'today', label: 'Today' },
                     { key: 'tomorrow', label: 'Tomorrow' },
@@ -995,7 +1043,6 @@ function Dashboard() {
               )}
             </div>
 
-            {/* Completed — collapsed by default, paginated */}
             {completedList.length > 0 && (
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 <button
